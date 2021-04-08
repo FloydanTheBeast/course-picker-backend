@@ -8,6 +8,7 @@
 		"plugin:@typescript-eslint/recommended"
 	],
 	"rules": {
+		"curly": ["error", "all"],
 		"no-console": 1,
 		"prettier/prettier": 1,
 		"@typescript-eslint/explicit-module-boundary-types": "off",
