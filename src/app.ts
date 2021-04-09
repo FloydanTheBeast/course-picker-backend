@@ -1,7 +1,9 @@
 import express from "express";
+import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import path from "path";
 import {
+	Action,
 	RoutingControllersOptions,
 	useExpressServer
 } from "routing-controllers";
@@ -36,7 +38,18 @@ class App {
 			console.error("MongoDB connection error");
 		});
 
-		useExpressServer(this.server, options);
+		useExpressServer(this.server, {
+			authorizationChecker: async (action: Action): Promise<boolean> => {
+				const token = action.request.headers["authorization"];
+				try {
+					jwt.verify(token.split(" ")[1], config.server.jwtSecret);
+					return true;
+				} catch (error) {
+					return false;
+				}
+			},
+			...options
+		});
 	}
 
 	public listen(port: number, callback?: () => void | undefined): void {

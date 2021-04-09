@@ -1,7 +1,14 @@
 import { Request, Response } from "express";
 import { validationResult } from "express-validator";
 import jwt from "jsonwebtoken";
-import { Body, JsonController, Post, Req, Res } from "routing-controllers";
+import {
+	Authorized,
+	Body,
+	JsonController,
+	Post,
+	Req,
+	Res
+} from "routing-controllers";
 import config from "../config";
 import { IUser } from "../interfaces";
 import UserModel from "../models/user";
@@ -94,7 +101,8 @@ export default class AuthController extends BaseController<IUser> {
 									username: existingUser.username,
 									id: existingUser._id
 								},
-								config.server.jwtSecret
+								config.server.jwtSecret,
+								{ expiresIn: "10m" }
 							)
 						});
 					}
@@ -102,5 +110,11 @@ export default class AuthController extends BaseController<IUser> {
 
 				return res.status(401).json({ error: "Неверный пароль" });
 			});
+	}
+
+	@Authorized()
+	@Post("/test")
+	public async test(@Res() res: Response): Promise<any> {
+		return res.status(200).json({ status: "Пользователь авторизован" });
 	}
 }
