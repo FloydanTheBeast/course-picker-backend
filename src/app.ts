@@ -40,9 +40,11 @@ class App {
 
 		useExpressServer(this.server, {
 			authorizationChecker: async (action: Action): Promise<boolean> => {
-				const token = action.request.headers["authorization"];
+				const token = action.request.headers["authorization"].split(
+					" "
+				)[1];
 				try {
-					jwt.verify(token.split(" ")[1], config.server.jwtSecret);
+					jwt.verify(token, config.server.jwtSecret);
 					return true;
 				} catch (error) {
 					return false;
