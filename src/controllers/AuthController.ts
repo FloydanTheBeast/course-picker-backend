@@ -123,41 +123,26 @@ export default class AuthController extends BaseController<IUser> {
 		@Res() res: Response
 	): Promise<any> {
 		if (!refreshToken) {
-			return res.status(401).json({
-				error: "Refresh token не указан"
-			});
+			return res.status(400).json();
 		}
 
-		try {
-			return await this.sessionModel
-				.findOne({ refreshToken })
-				.exec()
-				.then((existingSession) => {
-					if (!existingSession) {
-						return res.status(401).json({
-							error:
-								"Такого refresh token не существует, необходим повторный вход"
-						});
-					}
+		return await this.sessionModel
+			.findOne({ refreshToken })
+			.exec()
+			.then((existingSession) => {
+				if (!existingSession) {
+					return res.status(401).json();
+				}
 
-					try {
-						const accessToken = existingSession.refreshAccessToken();
-						return res.status(200).json({
-							accessToken
-						});
-					} catch (error) {
-						return res.status(401).json({
-							error:
-								"Refresh token недействителен, необходим повторный вход"
-						});
-					}
-				});
-		} catch (error) {
-			// FIXME: Разные ответы для частных ошибок
-			return res.status(401).json({
-				status: "Refresh token недействителен"
+				try {
+					const accessToken = existingSession.refreshAccessToken();
+					return res.status(200).json({
+						accessToken
+					});
+				} catch (error) {
+					return res.status(401).json();
+				}
 			});
-		}
 	}
 
 	@Post("/logout")
@@ -166,9 +151,7 @@ export default class AuthController extends BaseController<IUser> {
 		@Res() res: Response
 	): Promise<any> {
 		if (!refreshToken) {
-			return res.status(401).json({
-				error: "Refresh token не указан"
-			});
+			return res.status(400).json();
 		}
 
 		return await this.sessionModel
@@ -176,9 +159,7 @@ export default class AuthController extends BaseController<IUser> {
 			.exec()
 			.then((existingSession) => {
 				if (!existingSession) {
-					return res.status(401).json({
-						error: "Такого refresh token не существует"
-					});
+					return res.status(401).json();
 				}
 
 				return res.status(200).json();
