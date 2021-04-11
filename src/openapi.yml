@@ -1,0 +1,162 @@
+openapi: 3.0.3
+info:
+  title: Course Picker API
+  description: Документация backend-приложения платформы рекомендаций массовых онлайн курсов
+  version: 1.0.0
+paths:
+  /auth/signup:
+    post:
+      tags:
+      - auth
+      summary: Регистрация новго пользователя
+      requestBody:
+        required: true
+        description: Данные пользователя для добавления в базу данных
+        content: 
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSignup"
+      responses:
+        200:
+          description: Пользовател успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: "Пользователь успешно создан"
+        400:
+          description: Такой email или username уже существуют в базе данных
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Пользователь уже существует"
+  /auth/signin:
+    post:
+      tags: 
+      - auth
+      summary: "Аутентификация пользователя"
+      requestBody:
+        required: true
+        description: "Данные пользователя для входа (**по почте или логину**)"
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/UserEmailLogin"
+                - $ref: "#/components/schemas/UserNameLogin"
+      responses:
+        200:
+          description: "Успешная аутентификация, данные совпали"
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: "Успешный вход"
+                  accessToken:
+                    type: string
+                    format: JWT
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.he0ErCNloe4J7Id0Ry2SEDg09lKkZkfsRiGsdX_vgEg"
+        401:
+          description: "Неверные учётные данные"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error: 
+                    type: string
+                    example: "Неверный пароль"
+  /auth/refresh-token:
+    post:
+      tags:
+      - auth
+      summary: "Получение нового JWT access token"
+      parameters:
+        - in: header
+          name: x-refresh-token
+          required: true
+          description: "JWT refresh token"
+          schema:
+            $ref: "#/components/schemas/JWT"
+      responses:
+        200:
+          description: "Токен действителен"
+          content:
+            application/json:
+              schema:
+                properties:
+                  accessToken:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.he0ErCNloe4J7Id0Ry2SEDg09lKkZkfsRiGsdX_vgEg"
+        400:
+          description: "Токен не указан"
+        401:
+          description: "Токен недействителен, необходим повторный вход"
+  /auth/logout:
+    post:
+      tags:
+        - auth
+      summary: "Выход и удаление сессии"
+      parameters:
+        - in: header
+          name: x-refresh-token
+          required: true
+          description: "JWT refresh token"
+          schema:
+            $ref: "#/components/schemas/JWT"
+      responses:
+        200:
+          description: "Успешный выход"
+        400:
+          description: "Токен не указан"
+        401:
+          description: "Токен не существует в текущих сессиях"
+components:
+  schemas:
+    UserEmail:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+    UserName:
+      type: object
+      properties:
+        username:
+          type: string
+    UserPassword:
+      type: object
+      properties:
+        password:
+          type: string
+          format: password
+          pattern: "^$" # TODO: Выбрать паттерн, реализовать на бекенде
+          example: test123
+    UserSignup:
+      allOf:
+        - $ref: "#/components/schemas/UserEmail"
+        - $ref: "#/components/schemas/UserName" 
+        - $ref: "#/components/schemas/UserPassword"
+      required: ["email", "username", "password"]
+    UserEmailLogin:
+      description: "Схема для входа по адресу почты"
+      allOf:
+        - $ref: "#/components/schemas/UserEmail"
+        - $ref: "#/components/schemas/UserPassword"
+      required: ["email", "password"]
+    UserNameLogin:
+      description: "Схема для входа по логину"
+      allOf:
+        - $ref: "#/components/schemas/UserName"
+        - $ref: "#/components/schemas/UserPassword"
+      required: ["username", "password"]
+    JWT:
+      description: "Схема для описания JWT токена"   
+      type: string
+      format: JWT

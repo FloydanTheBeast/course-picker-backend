@@ -5,6 +5,12 @@
 		"rootDir": "./",
 		"outDir": "./build",
 		"esModuleInterop": true,
-		"strict": true
+		"strict": true,
+		"baseUrl": ".",
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"paths": {
+			"*": ["node_modules/*"]
+		}
 	}
 }
