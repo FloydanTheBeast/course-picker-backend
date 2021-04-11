@@ -1,0 +1,38 @@
+server {
+    # Nginx слушает порт 80
+    listen 80;
+    server_name {host};
+
+	charset UTF-8;
+        # Указываем "динамическую" папку в качестве директории проекта
+        root /var/www/projects/mooc;
+
+    # Указываем основной файл заглушки (относительно root директории проекта)
+	# = / означает, что был переход по адресу конректно {host}/
+
+	location = / {
+		try_files /html/index.html =404;
+	}
+
+	
+    # Если мы обращаемся по любому URL начиная с /
+    # то сервер будет обрабатывать NodeJS
+    location / {
+            #Тут указываем IP|Url и порт (8080) для NodeJS (перенаправляем)
+            #поскольку Nginx слушает 80 порт, а скрипт слушает 8080
+            proxy_pass http://{host}:8080;
+            proxy_set_header Host $host;
+    }
+
+    # Если мы обращемся по URL начинающийся с /files/
+    # то мы будем подгружать "статичные" файлы хранящиеся в нем
+    # в соответствии с наличием этих файлов в этой папке
+    location /files/ {
+            # Помним, что корневая директория /var/www/projects/mooc, и относительно неё будут подгружаться файлы
+            # Тогда итоговый путь до файла при обращении по адресу {host}/files/test.txt будет /var/www/projects/mooc/files/test.txt
+            autoindex on;
+
+    }
+	#error_log /var/log/nginx/debug.log debug;
+}
+
