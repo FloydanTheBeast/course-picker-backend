@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Course Picker API
-  description: Документация
+  description: Документация backend-приложения платформы рекомендаций массовых онлайн курсов
   version: 1.0.0
 paths:
   /auth/signup:
@@ -97,7 +97,7 @@ paths:
         400:
           description: "Токен не указан"
         401:
-          description: "Токен недействителен"
+          description: "Токен недействителен, необходим повторный вход"
   /auth/logout:
     post:
       tags:
