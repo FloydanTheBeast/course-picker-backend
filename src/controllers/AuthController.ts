@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { validationResult } from "express-validator";
 import {
-	Authorized,
 	Body,
 	HeaderParam,
 	JsonController,
@@ -128,6 +127,7 @@ export default class AuthController extends BaseController<IUser> {
 				error: "Refresh token не указан"
 			});
 		}
+
 		try {
 			return await this.sessionModel
 				.findOne({ refreshToken })
@@ -160,9 +160,28 @@ export default class AuthController extends BaseController<IUser> {
 		}
 	}
 
-	@Authorized()
-	@Post("/test")
-	public async test(@Res() res: Response): Promise<any> {
-		return res.status(200).json({ status: "Пользователь авторизован" });
+	@Post("/logout")
+	public async logout(
+		@HeaderParam("x-refresh-token") refreshToken: string,
+		@Res() res: Response
+	): Promise<any> {
+		if (!refreshToken) {
+			return res.status(401).json({
+				error: "Refresh token не указан"
+			});
+		}
+
+		return await this.sessionModel
+			.findOneAndDelete({ refreshToken })
+			.exec()
+			.then((existingSession) => {
+				if (!existingSession) {
+					return res.status(401).json({
+						error: "Такого refresh token не существует"
+					});
+				}
+
+				return res.status(200).json();
+			});
 	}
 }
