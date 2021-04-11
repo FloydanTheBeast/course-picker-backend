@@ -1,12 +1,26 @@
-import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
+import { Document, Model, model, Schema } from "mongoose";
+import config from "../config";
 import { IUser } from "../interfaces";
 import { generateSalt, hashSHA512 } from "../utils/crypto";
 
-export interface IUserDocument extends IUser, mongoose.Document {
+// TODO: Вынести в файл декларации
+type accessToken = string;
+type refreshToken = string;
+
+type tokenPair = {
+	accessToken: accessToken;
+	refreshToken: refreshToken;
+};
+
+export interface IUserDocument extends IUser, Document {
 	validatePassword: (otherPassword: string) => string;
+	generateTokenPair: () => tokenPair;
 }
 
-const UserSchema = new mongoose.Schema<IUserDocument>({
+export type IUserModel = Model<IUserDocument>;
+
+const UserSchema = new Schema<IUserDocument>({
 	email: {
 		type: String,
 		unique: true
@@ -51,11 +65,40 @@ UserSchema.methods.validatePassword = function (
 	return user.password === hashSHA512(rawPassword, salt);
 };
 
+UserSchema.methods.generateTokenPair = function (): tokenPair {
+	const user = this;
+
+	return {
+		accessToken: jwt.sign(
+			{
+				email: user.email,
+				username: user.username,
+				id: user._id
+			},
+			config.server.jwtSecret,
+			{
+				expiresIn: "10m"
+			}
+		),
+		refreshToken: jwt.sign(
+			{
+				email: user.email,
+				username: user.username,
+				id: user._id
+			},
+			config.server.jwtRefreshSecret,
+			{
+				expiresIn: "2h"
+			}
+		)
+	};
+};
+
 UserSchema.methods.getRegistrationDate = function (): string {
 	const user = this;
 	return user.registrationDate.toLocaleDateString();
 };
 
-const user = mongoose.model<IUserDocument>("User", UserSchema);
+const User = model<IUserDocument, IUserModel>("User", UserSchema);
 
-export default user;
+export default User;

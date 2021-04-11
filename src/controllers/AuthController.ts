@@ -1,22 +1,22 @@
 import { Request, Response } from "express";
 import { validationResult } from "express-validator";
-import jwt from "jsonwebtoken";
 import {
 	Authorized,
 	Body,
+	HeaderParam,
 	JsonController,
 	Post,
 	Req,
 	Res
 } from "routing-controllers";
-import config from "../config";
 import { IUser } from "../interfaces";
-import UserModel from "../models/user";
+import { SessionModel, UserModel } from "../models";
 import BaseController from "./BaseController";
 
 @JsonController("/auth")
 export default class AuthController extends BaseController<IUser> {
 	userModel = UserModel;
+	sessionModel = SessionModel;
 
 	constructor() {
 		super();
@@ -93,23 +93,71 @@ export default class AuthController extends BaseController<IUser> {
 
 				if (existingUser.validatePassword(userData.password)) {
 					{
-						return res.status(200).json({
-							status: "Успешный вход",
-							accessToken: jwt.sign(
-								{
-									email: existingUser.email,
-									username: existingUser.username,
-									id: existingUser._id
-								},
-								config.server.jwtSecret,
-								{ expiresIn: "10m" }
-							)
-						});
+						const tokenPair = existingUser.generateTokenPair();
+						// TODO: Прилинковать модели, хранить сессии у конкретного пользователя
+						// Создаем сессию и сохраняем её в БД
+						return new this.sessionModel({
+							refreshToken: tokenPair.refreshToken
+						})
+							.save()
+							.then(() => {
+								return res.status(200).json({
+									status: "Успешный вход",
+									...tokenPair
+								});
+							})
+							.catch(() => {
+								return res.status(401).json({
+									error: "Ошибка при входе"
+								});
+							});
 					}
 				}
 
 				return res.status(401).json({ error: "Неверный пароль" });
 			});
+	}
+
+	@Post("/refresh-token")
+	public async refreshToken(
+		@HeaderParam("x-refresh-token") refreshToken: string,
+		@Res() res: Response
+	): Promise<any> {
+		if (!refreshToken) {
+			return res.status(401).json({
+				error: "Refresh token не указан"
+			});
+		}
+		try {
+			return await this.sessionModel
+				.findOne({ refreshToken })
+				.exec()
+				.then((existingSession) => {
+					if (!existingSession) {
+						return res.status(401).json({
+							error:
+								"Такого refresh token не существует, необходим повторный вход"
+						});
+					}
+
+					try {
+						const accessToken = existingSession.refreshAccessToken();
+						return res.status(200).json({
+							accessToken
+						});
+					} catch (error) {
+						return res.status(401).json({
+							error:
+								"Refresh token недействителен, необходим повторный вход"
+						});
+					}
+				});
+		} catch (error) {
+			// FIXME: Разные ответы для частных ошибок
+			return res.status(401).json({
+				status: "Refresh token недействителен"
+			});
+		}
 	}
 
 	@Authorized()
