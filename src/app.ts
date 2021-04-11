@@ -1,5 +1,5 @@
 import express from "express";
-import jwt from "jsonwebtoken";
+import jwt, { TokenExpiredError } from "jsonwebtoken";
 import mongoose from "mongoose";
 import path from "path";
 import {
@@ -47,9 +47,13 @@ class App {
 					jwt.verify(token, config.server.jwtSecret);
 					return true;
 				} catch (error) {
+					if (error instanceof TokenExpiredError) {
+						throw error;
+					}
 					return false;
 				}
 			},
+			defaultErrorHandler: false,
 			...options
 		});
 	}

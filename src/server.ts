@@ -5,6 +5,7 @@ import { AuthController } from "./controllers";
 
 const app = new App({
 	cors: true,
+	middlewares: [__dirname + "/middlewares/**/*.ts"],
 	controllers: [AuthController]
 });
 
