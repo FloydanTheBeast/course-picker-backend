@@ -26,7 +26,8 @@ class App {
 		);
 
 		mongoose.connect(
-			`mongodb://${config.database.host}:${config.database.port}/coursepicker`,
+			`mongodb://${config.database.username}:${config.database.password}@`
+			+ `${config.database.host}:${config.database.port}/${config.database.name}?authSource=admin`,
 			{
 				useNewUrlParser: true,
 				useUnifiedTopology: true,
