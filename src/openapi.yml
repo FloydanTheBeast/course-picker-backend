@@ -72,7 +72,51 @@ paths:
                   error: 
                     type: string
                     example: "Неверный пароль"
-
+  /auth/refresh-token:
+    post:
+      tags:
+      - auth
+      summary: "Получение нового JWT access token"
+      parameters:
+        - in: header
+          name: x-refresh-token
+          required: true
+          description: "JWT refresh token"
+          schema:
+            $ref: "#/components/schemas/JWT"
+      responses:
+        200:
+          description: "Токен действителен"
+          content:
+            application/json:
+              schema:
+                properties:
+                  accessToken:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.he0ErCNloe4J7Id0Ry2SEDg09lKkZkfsRiGsdX_vgEg"
+        400:
+          description: "Токен не указан"
+        401:
+          description: "Токен недействителен"
+  /auth/logout:
+    post:
+      tags:
+        - auth
+      summary: "Выход и удаление сессии"
+      parameters:
+        - in: header
+          name: x-refresh-token
+          required: true
+          description: "JWT refresh token"
+          schema:
+            $ref: "#/components/schemas/JWT"
+      responses:
+        200:
+          description: "Успешный выход"
+        400:
+          description: "Токен не указан"
+        401:
+          description: "Токен не существует в текущих сессиях"
 components:
   schemas:
     UserEmail:
@@ -112,4 +156,7 @@ components:
         - $ref: "#/components/schemas/UserName"
         - $ref: "#/components/schemas/UserPassword"
       required: ["username", "password"]
-        
+    JWT:
+      description: "Схема для описания JWT токена"   
+      type: string
+      format: JWT
