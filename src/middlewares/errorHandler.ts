@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
-import { TokenExpiredError } from "jsonwebtoken";
 import {
 	ExpressErrorMiddlewareInterface,
 	Middleware
 } from "routing-controllers";
+import logger from "../utils/logger";
 
 @Middleware({ type: "after" })
 export class HttpErrorHandler implements ExpressErrorMiddlewareInterface {
@@ -13,11 +13,8 @@ export class HttpErrorHandler implements ExpressErrorMiddlewareInterface {
 		res: Response,
 		next: (err?: Error) => any
 	): void {
-		if (error instanceof TokenExpiredError) {
-			res.json({ err: error.name, refreshToken: "test" });
-		} else {
-			res.json({ err: error.name });
-		}
+		logger.error(error);
+		res.status(500).json({ error });
 		next();
 	}
 }

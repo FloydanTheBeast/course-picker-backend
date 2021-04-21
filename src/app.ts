@@ -10,6 +10,7 @@ import {
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
 import config from "./config";
+import logger from "./utils/logger";
 
 const swaggerDoc = YAML.load(path.join(__dirname, "openapi.yml"));
 
@@ -26,16 +27,23 @@ class App {
 		);
 
 		mongoose.connect(
-			`mongodb://${config.database.host}:${config.database.port}/coursepicker`,
+			`mongodb://${config.database.username}:${config.database.password}@` +
+				`${config.database.host}:${config.database.port}/${config.database.name}?authSource=admin`,
 			{
 				useNewUrlParser: true,
 				useUnifiedTopology: true,
-				useCreateIndex: true
+				useCreateIndex: true,
+				useFindAndModify: false
 			}
 		);
+
 		this.db = mongoose.connection;
 		this.db.on("error", () => {
-			console.error("MongoDB connection error");
+			logger.error("MongoDB connection error");
+		});
+
+		this.db.on("open", () => {
+			logger.success("MongoDB successfully connected");
 		});
 
 		useExpressServer(this.server, {

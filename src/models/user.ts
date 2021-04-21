@@ -3,6 +3,7 @@ import { Document, Model, model, Schema } from "mongoose";
 import config from "../config";
 import { IUser } from "../interfaces";
 import { generateSalt, hashSHA512 } from "../utils/crypto";
+import Session from "./session";
 
 // TODO: Вынести в файл декларации
 type accessToken = string;
@@ -15,7 +16,8 @@ type tokenPair = {
 
 export interface IUserDocument extends IUser, Document {
 	validatePassword: (otherPassword: string) => string;
-	generateTokenPair: () => tokenPair;
+	generateTokenPair: () => Promise<tokenPair>;
+	refreshTokenPair: (refreshToken: string) => Promise<tokenPair>;
 }
 
 export type IUserModel = Model<IUserDocument>;
@@ -33,7 +35,13 @@ const UserSchema = new Schema<IUserDocument>({
 	registrationDate: {
 		type: Date,
 		default: Date.now
-	}
+	},
+	sessions: [
+		{
+			type: Schema.Types.ObjectId,
+			ref: "Session"
+		}
+	]
 });
 
 UserSchema.pre("save", function (next) {
@@ -65,10 +73,10 @@ UserSchema.methods.validatePassword = function (
 	return user.password === hashSHA512(rawPassword, salt);
 };
 
-UserSchema.methods.generateTokenPair = function (): tokenPair {
+UserSchema.methods.generateTokenPair = async function (): Promise<tokenPair | null> {
 	const user = this;
 
-	return {
+	const tokens = {
 		accessToken: jwt.sign(
 			{
 				email: user.email,
@@ -77,7 +85,7 @@ UserSchema.methods.generateTokenPair = function (): tokenPair {
 			},
 			config.server.jwtSecret,
 			{
-				expiresIn: "10m"
+				expiresIn: config.server.tokenExpirationTime
 			}
 		),
 		refreshToken: jwt.sign(
@@ -88,10 +96,28 @@ UserSchema.methods.generateTokenPair = function (): tokenPair {
 			},
 			config.server.jwtRefreshSecret,
 			{
-				expiresIn: "2h"
+				expiresIn: config.server.refreshTokenExpirationTime
 			}
 		)
 	};
+
+	return await new Session({
+		refreshToken: tokens.refreshToken,
+		user: user._id
+	})
+		.save()
+		.then((session) => {
+			user.sessions.push(session._id);
+			return user.save().then(() => tokens);
+		});
+};
+
+UserSchema.methods.refreshTokenPair = async function (
+	refreshToken: string
+): Promise<tokenPair> {
+	const user = this;
+	jwt.verify(refreshToken, config.server.jwtRefreshSecret);
+	return await user.generateTokenPair();
 };
 
 UserSchema.methods.getRegistrationDate = function (): string {

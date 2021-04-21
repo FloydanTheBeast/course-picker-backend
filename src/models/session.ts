@@ -1,11 +1,8 @@
-import jwt from "jsonwebtoken";
 import { Document, Model, model, Schema } from "mongoose";
-import config from "../config";
 import { ISession } from "../interfaces";
+import { IUserDocument } from "./user";
 
-export interface ISessionDocument extends ISession, Document {
-	refreshAccessToken: () => string;
-}
+export interface ISessionDocument extends ISession, Document {}
 
 export type ISessionModel = Model<ISessionDocument>;
 
@@ -13,24 +10,28 @@ const SessionSchema = new Schema<ISessionDocument>({
 	refreshToken: {
 		type: String,
 		required: true
+	},
+	user: {
+		type: Schema.Types.ObjectId,
+		ref: "User"
 	}
 });
 
-SessionSchema.methods.refreshAccessToken = function (): string {
-	const { refreshToken } = this;
+SessionSchema.pre("remove", async function () {
+	const session = this;
 
-	const payload = jwt.verify(refreshToken, config.server.jwtRefreshSecret, {
-		complete: true
-	}) as Record<string, unknown>;
+	await session.populate("user").execPopulate();
 
-	// Удаляем неунжную информацию о времени создания и действительности
-	delete payload.iat;
-	delete payload.ext;
+	if ("sessions" in session.user) {
+		const user = session.user as IUserDocument;
 
-	return jwt.sign(payload, config.server.jwtSecret, {
-		expiresIn: "10m"
-	});
-};
+		user.sessions = user.sessions.filter(
+			(sessionEntry) => !session._id.equals(sessionEntry)
+		);
+
+		await user.save();
+	}
+});
 
 const Session = model<ISessionDocument, ISessionModel>(
 	"Session",
