@@ -40,6 +40,14 @@ paths:
                   error:
                     type: string
                     example: "Пользователь уже существует"
+        500:
+          description: Внутренняя ошибка сервера при сохранении пользователя
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
   /auth/signin:
     post:
       tags: 
@@ -61,13 +69,10 @@ paths:
             application/json:
               schema:
                 properties:
-                  status:
-                    type: string
-                    example: "Успешный вход"
                   accessToken:
-                    type: string
-                    format: JWT
-                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.he0ErCNloe4J7Id0Ry2SEDg09lKkZkfsRiGsdX_vgEg"
+                    $ref: "#/components/schemas/JWT"
+                  refreshToken:
+                    $ref: "#/components/schemas/JWT"
         401:
           description: "Неверные учётные данные"
           content:
@@ -76,7 +81,7 @@ paths:
                 properties:
                   error: 
                     type: string
-                    example: "Неверный пароль"
+                    example: "Пользователя с таким логином/почтой не существует"
   /auth/refresh-token:
     post:
       tags:
@@ -97,17 +102,32 @@ paths:
               schema:
                 properties:
                   accessToken:
-                    type: string
-                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.he0ErCNloe4J7Id0Ry2SEDg09lKkZkfsRiGsdX_vgEg"
-        400:
-          description: "Токен не указан"
+                    $ref: "#/components/schemas/JWT"
+                  refreshToken:
+                    $ref: "#/components/schemas/JWT"
         401:
-          description: "Токен недействителен, необходим повторный вход"
+          description: "Истёк срок действия токена"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Рефреш токен недействителен"
+        404:
+          description: "Токен не найден в коллекции сессий"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Рефреш токен не найден"
   /auth/logout:
     post:
       tags:
         - auth
-      summary: "Выход и удаление сессии"
+      summary: "Выход и удаление сессии из коллекции"
       parameters:
         - in: header
           name: x-refresh-token
@@ -118,31 +138,70 @@ paths:
       responses:
         200:
           description: "Успешный выход"
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: "Успешный выход"
         400:
           description: "Токен не указан"
-        401:
-          description: "Токен не существует в текущих сессиях"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Рефреш токен не указан"
+        404:
+          description: "Токен не найден в коллекции сессий"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Рефреш токен не найден"
   /courses/:
     get:
       tags:
         - courses
       summary: "Получение курсов"
       parameters:
-        - name: "pageSize"
-          in: "path"
+        - in: query
+          name: pageSize
           description: "Размер страницы (лимит количества курсов в ответе)"
-          default: 10
-          type: "integer"
-        - name: "pageNumber"
-          in: "path"
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: pageNumber
           description: "Номер страницы"
-          default: 1
-          type: "integer"
+          schema:
+            type: integer
+            default: 1
       responses:
         200:
           description: "Успешный запрос на получение курсов"
+          content:
+            application/json:
+              schema:
+                properties:
+                  nextPage:
+                    type: string
+                    nullable: true
+                    example: "/courses/?pageSize=10&pageNumber=2"
+                  courses:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Course"
 components:
   schemas:
+    ObjectId:
+      description: "Встроенный в MongoDB ID объекта"
+      type: string
+      example: "607f4ddcca564d31e529c385"
     UserEmail:
       type: object
       properties:
@@ -184,3 +243,96 @@ components:
       description: "Схема для описания JWT токена"   
       type: string
       format: JWT
+      example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.he0ErCNloe4J7Id0Ry2SEDg09lKkZkfsRiGsdX_vgEg"
+    CourseLanguages:
+      description: "Схума для описания языков курса"
+      type: array
+      items:
+        type: string
+      example: ["ru"]
+    CourseId:
+      description: "Уникальный id курса"
+      type: string
+      example: openedu_2
+    CourseName:
+      description: "Название курса"
+      type: string
+      example: "Веб-программирование"
+    CourseDescription:
+      description: "Полное описание курса"
+      type: string
+      example: "Короткое описание курса"
+    CourseShortDescription:
+      description: "Короткое описание курса"
+      type: string
+      example: "Полное описание курса"
+    CourseLink:
+      description: "Ссылка на курс"
+      type: string
+      example: "https://openedu.ru/course/ITMOUniversity/WEBDEV/"
+    CoursePreviewImageLink:
+      description: "Ссылка на картинку с превью курса"
+      type: string
+      example: "https://cdn.openedu.ru/f1367c/CACHE/images/cover/itmo_web_s/71c221bca9f9ad3ad57b257ae0ede1e2.png"
+    CourseVendor:
+      description: "Платформа-поставщик курса"
+      type: string
+      example: "openedu"
+    CourseAuthorName:
+      description: "Название/имя автора курса"
+      type: string
+      example: "Университет ИТМО"
+    CourseAuthorLink:
+      description: "Ссылка на автора курса"
+      type: string
+      example: "https://openedu.ru/university/ITMOUniversity/"
+    CourseAuthorIcon:
+      description: "Ссылка на картинку автора курса"
+      type: string
+      example: "https://cdn.openedu.ru/f1367c/university-icon/itmo_small_white_rus_100_100.png"
+    CourseAuthor:
+      description: "Схема объекта автора курса"
+      type: object
+      properties:
+        name:
+          $ref: "#/components/schemas/CourseAuthorName"
+        link:
+          $ref: "#/components/schemas/CourseAuthorLink"
+        icon:
+          $ref: "#/components/schemas/CourseAuthorIcon"
+    CourseDuration:
+      description: "Длительность курса"
+      type: string
+      example: "10w"
+    CoursePrice:
+      description: "Цена курса"
+      type: string
+      example: "0"
+    Course:
+      description: "Схема для описания курса"
+      type: object
+      properties:
+        courseLanguages:
+          $ref: "#/components/schemas/CourseLanguages"
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        id:
+          $ref: "#/components/schemas/CourseId"
+        courseName:
+          $ref: "#/components/schemas/CourseName"
+        description:
+          $ref: "#/components/schemas/CourseDescription"
+        shortDescription:
+          $ref: "#/components/schemas/CourseShortDescription"
+        link:
+          $ref: "#/components/schemas/CourseLink"
+        previewImageLink:
+          $ref: "#/components/schemas/CoursePreviewImageLink"
+        vendor:
+          $ref: "#/components/schemas/CourseVendor"
+        author:
+          $ref: "#/components/schemas/CourseAuthor"
+        duration:
+          $ref: "#/components/schemas/CourseDuration"
+        price:
+          $ref: "#/components/schemas/CoursePrice"
