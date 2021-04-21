@@ -2,7 +2,12 @@ openapi: 3.0.3
 info:
   title: Course Picker API
   description: Документация backend-приложения платформы рекомендаций массовых онлайн курсов
-  version: 1.0.0
+  version: 1.0.1
+tags:
+  - name: "auth"
+    description: "Методы для регистрации, авторизации, логаута и обновления токенов"
+  - name: "courses"
+    description: "Получение курсов"
 paths:
   /auth/signup:
     post:
@@ -117,6 +122,25 @@ paths:
           description: "Токен не указан"
         401:
           description: "Токен не существует в текущих сессиях"
+  /courses/:
+    get:
+      tags:
+        - courses
+      summary: "Получение курсов"
+      parameters:
+        - name: "pageSize"
+          in: "path"
+          description: "Размер страницы (лимит количества курсов в ответе)"
+          default: 10
+          type: "integer"
+        - name: "pageNumber"
+          in: "path"
+          description: "Номер страницы"
+          default: 1
+          type: "integer"
+      responses:
+        200:
+          description: "Успешный запрос на получение курсов"
 components:
   schemas:
     UserEmail:
