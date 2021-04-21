@@ -56,20 +56,17 @@ export default class AuthController extends BaseController<IUser> {
 						.json({ error: "Пользователь уже существует" });
 				}
 
-				return (
-					user
-						.save()
-						.then((user) =>
-							res
-								.status(200)
-								.json({ status: "Пользователь успешно создан" })
-						)
-						// FIXME: Отправлять человекочитаемую ошибку
-						.catch((error) => res.status(400).json({ error }))
-				);
-			})
-			// FIXME: Собственная ошибка
-			.catch((err) => err);
+				return user
+					.save()
+					.then((user) =>
+						res
+							.status(200)
+							.json({ status: "Пользователь успешно создан" })
+					)
+					.catch((error) => {
+						throw error;
+					});
+			});
 	}
 
 	@Post("/signin")
@@ -97,10 +94,7 @@ export default class AuthController extends BaseController<IUser> {
 						return existingUser
 							.generateTokenPair()
 							.then((tokenPair) => {
-								return res.status(200).json({
-									status: "Успешный вход",
-									...tokenPair
-								});
+								return res.status(200).json(tokenPair);
 							})
 							.catch((error) => {
 								throw error;
@@ -167,14 +161,14 @@ export default class AuthController extends BaseController<IUser> {
 			.findOne({ refreshToken })
 			.then((existingSession) => {
 				if (!existingSession) {
-					return res.status(401).json({
-						error: "Рефреш токен недействителен"
+					return res.status(404).json({
+						error: "Рефреш токен не найден"
 					});
 				}
 
 				return existingSession.remove().then(() =>
 					res.status(200).json({
-						error: "Успешный выход"
+						status: "Успешный выход"
 					})
 				);
 			});
