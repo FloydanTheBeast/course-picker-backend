@@ -26,17 +26,22 @@ class App {
 		);
 
 		mongoose.connect(
-			`mongodb://${config.database.username}:${config.database.password}@`
-			+ `${config.database.host}:${config.database.port}/${config.database.name}?authSource=admin`,
+			`mongodb://${config.database.username}:${config.database.password}@` +
+				`${config.database.host}:${config.database.port}/${config.database.name}?authSource=admin`,
 			{
 				useNewUrlParser: true,
 				useUnifiedTopology: true,
 				useCreateIndex: true
 			}
 		);
+
 		this.db = mongoose.connection;
 		this.db.on("error", () => {
 			console.error("MongoDB connection error");
+		});
+
+		this.db.on("open", () => {
+			console.log("MongoDB successfully connected");
 		});
 
 		useExpressServer(this.server, {

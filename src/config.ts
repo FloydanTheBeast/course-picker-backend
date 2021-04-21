@@ -5,7 +5,7 @@
 
 import dotenv from "dotenv";
 import * as path from "path";
-import {validateEnv} from "./utils/validateEnv";
+import { validateEnv } from "./utils/validateEnv";
 
 dotenv.config({
 	path: path.join(__dirname, ".env")
@@ -18,7 +18,9 @@ const config = {
 		host: "localhost",
 		port: env.SERVER_PORT,
 		jwtSecret: env.JWT_SECRET,
-		jwtRefreshSecret: env.JWT_REFRESH_SECRET
+		jwtRefreshSecret: env.JWT_REFRESH_SECRET,
+		tokenExpirationTime: "15m",
+		refreshTokenExpirationTime: "24h"
 	},
 	database: {
 		host: env.DB_HOST,
