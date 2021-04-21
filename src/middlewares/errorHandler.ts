@@ -16,6 +16,7 @@ export class HttpErrorHandler implements ExpressErrorMiddlewareInterface {
 		if (error instanceof TokenExpiredError) {
 			res.json({ err: error.name, refreshToken: "test" });
 		} else {
+			console.log(error.stack + "\n");
 			res.json({ err: error.name });
 		}
 		next();

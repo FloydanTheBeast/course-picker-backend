@@ -1,12 +1,12 @@
 import "reflect-metadata";
 import App from "./app";
 import config from "./config";
-import { AuthController } from "./controllers";
+import {AuthController, ParseController, CourseController} from "./controllers";
 
 const app = new App({
 	cors: true,
 	middlewares: [__dirname + "/middlewares/**/*.ts"],
-	controllers: [AuthController]
+	controllers: [AuthController, ParseController, CourseController]
 });
 
 app.listen(config.server.port, () => {

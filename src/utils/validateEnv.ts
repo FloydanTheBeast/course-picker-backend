@@ -11,6 +11,7 @@ export function validateEnv(env: unknown) {
 		DB_USER: str({desc: "Имя пользователя базы данных"}),
 		DB_PASSWORD: str({desc: "Пароль от пользователя базы данных"}),
 		JWT_SECRET: str({ default: '7855b9307fa24bb785f2deaa9c702930' }),
-		JWT_REFRESH_SECRET: str({ default: '04bbed8fb6ed42c9815a5ecf8eb9b10c' })
+		JWT_REFRESH_SECRET: str({ default: '04bbed8fb6ed42c9815a5ecf8eb9b10c' }),
+		UDEMY_AUTH_HEADER: str()
 	});
 }

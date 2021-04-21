@@ -1,5 +1,5 @@
 import express from "express";
-import jwt, { TokenExpiredError } from "jsonwebtoken";
+import jwt, {TokenExpiredError} from "jsonwebtoken";
 import mongoose from "mongoose";
 import path from "path";
 import {
@@ -31,7 +31,8 @@ class App {
 			{
 				useNewUrlParser: true,
 				useUnifiedTopology: true,
-				useCreateIndex: true
+				useCreateIndex: true,
+				useFindAndModify: false
 			}
 		);
 		this.db = mongoose.connection;

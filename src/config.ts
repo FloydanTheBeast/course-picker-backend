@@ -26,6 +26,9 @@ const config = {
 		name: env.DB_NAME,
 		username: env.DB_USER,
 		password: env.DB_PASSWORD
+	},
+	parseTokens: {
+		udemyAuthHeader: env.UDEMY_AUTH_HEADER
 	}
 };
 
