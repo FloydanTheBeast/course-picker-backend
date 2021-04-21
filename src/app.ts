@@ -10,6 +10,7 @@ import {
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
 import config from "./config";
+import logger from "./utils/logger";
 
 const swaggerDoc = YAML.load(path.join(__dirname, "openapi.yml"));
 
@@ -37,11 +38,11 @@ class App {
 
 		this.db = mongoose.connection;
 		this.db.on("error", () => {
-			console.error("MongoDB connection error");
+			logger.error("MongoDB connection error");
 		});
 
 		this.db.on("open", () => {
-			console.log("MongoDB successfully connected");
+			logger.success("MongoDB successfully connected");
 		});
 
 		useExpressServer(this.server, {
