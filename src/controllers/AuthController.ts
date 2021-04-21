@@ -10,6 +10,7 @@ import {
 } from "routing-controllers";
 import { IUser } from "../interfaces";
 import { SessionModel, UserModel } from "../models";
+import { IUserDocument } from "../models/user";
 import BaseController from "./BaseController";
 
 @JsonController("/auth")
@@ -44,10 +45,12 @@ export default class AuthController extends BaseController<IUser> {
 		const user = new this.userModel(userData);
 
 		return await this.userModel
+			// TODO: Поиск по логину
 			.findOne({ email: userData.email })
 			.exec()
 			.then((existingUser) => {
 				if (existingUser) {
+					// FIXME: Отправлять осмысленную ошибку
 					return res
 						.status(400)
 						.json({ error: "Пользователь уже существует" });
@@ -81,7 +84,6 @@ export default class AuthController extends BaseController<IUser> {
 					{ username: userData.username }
 				]
 			})
-			.exec()
 			.then((existingUser) => {
 				if (!existingUser) {
 					return res.status(401).json({
@@ -92,23 +94,16 @@ export default class AuthController extends BaseController<IUser> {
 
 				if (existingUser.validatePassword(userData.password)) {
 					{
-						const tokenPair = existingUser.generateTokenPair();
-						// TODO: Прилинковать модели, хранить сессии у конкретного пользователя
-						// Создаем сессию и сохраняем её в БД
-						return new this.sessionModel({
-							refreshToken: tokenPair.refreshToken
-						})
-							.save()
-							.then(() => {
+						return existingUser
+							.generateTokenPair()
+							.then((tokenPair) => {
 								return res.status(200).json({
 									status: "Успешный вход",
 									...tokenPair
 								});
 							})
-							.catch(() => {
-								return res.status(401).json({
-									error: "Ошибка при входе"
-								});
+							.catch((error) => {
+								throw error;
 							});
 					}
 				}
@@ -123,25 +118,37 @@ export default class AuthController extends BaseController<IUser> {
 		@Res() res: Response
 	): Promise<any> {
 		if (!refreshToken) {
-			return res.status(400).json();
+			return res.status(400).json({ error: "Рефреш токен не указан" });
 		}
 
 		return await this.sessionModel
-			.findOne({ refreshToken })
-			.exec()
+			.findOneAndRemove({ refreshToken })
 			.then((existingSession) => {
 				if (!existingSession) {
-					return res.status(401).json();
+					return res.status(404).json({
+						error: "Рефреш токен не найдён"
+					});
 				}
 
-				try {
-					const accessToken = existingSession.refreshAccessToken();
-					return res.status(200).json({
-						accessToken
+				return existingSession
+					.populate("user")
+					.execPopulate()
+					.then(() => {
+						const user = existingSession.user as IUserDocument;
+
+						return user
+							.refreshTokenPair(existingSession.refreshToken)
+							.then((tokenPair) =>
+								res.status(200).json({
+									...tokenPair
+								})
+							)
+							.catch(() =>
+								res.status(401).json({
+									error: "Рефреш токен недействителен"
+								})
+							);
 					});
-				} catch (error) {
-					return res.status(401).json();
-				}
 			});
 	}
 
@@ -151,18 +158,25 @@ export default class AuthController extends BaseController<IUser> {
 		@Res() res: Response
 	): Promise<any> {
 		if (!refreshToken) {
-			return res.status(400).json();
+			return res.status(400).json({
+				error: "Рефреш токен не указан"
+			});
 		}
 
 		return await this.sessionModel
-			.findOneAndDelete({ refreshToken })
-			.exec()
+			.findOne({ refreshToken })
 			.then((existingSession) => {
 				if (!existingSession) {
-					return res.status(401).json();
+					return res.status(401).json({
+						error: "Рефреш токен недействителен"
+					});
 				}
 
-				return res.status(200).json();
+				return existingSession.remove().then(() =>
+					res.status(200).json({
+						error: "Успешный выход"
+					})
+				);
 			});
 	}
 }
