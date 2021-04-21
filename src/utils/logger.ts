@@ -1,11 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const colors = require("colors");
 
-// FIXME: Проверять версию сборки
-const isDev = true;
-
-colors.enable();
-
 class logger {
 	static error(msg: any): void {
 		colors.setTheme({
@@ -44,7 +39,7 @@ class logger {
 	}
 
 	private static print(msg: any, type: string): void {
-		isDev &&
+		!global.isProd &&
 			// eslint-disable-next-line no-console
 			console.log(
 				colors.info(`[${new Date().toLocaleTimeString()}] ${type}:`) +

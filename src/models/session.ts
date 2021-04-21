@@ -22,7 +22,7 @@ SessionSchema.pre("remove", async function () {
 
 	await session.populate("user").execPopulate();
 
-	if (session.user.sessions) {
+	if ("sessions" in session.user) {
 		const user = session.user as IUserDocument;
 
 		user.sessions = user.sessions.filter(

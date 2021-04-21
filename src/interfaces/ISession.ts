@@ -1,5 +1,5 @@
 import { Schema } from "mongoose";
-import { IUserDocument } from "src/models/user";
+import { IUserDocument } from "../models/user";
 
 interface ISession {
 	refreshToken: string;

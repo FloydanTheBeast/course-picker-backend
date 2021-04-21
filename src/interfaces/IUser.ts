@@ -1,5 +1,5 @@
 import { Schema } from "mongoose";
-import { ISessionDocument } from "src/models/session";
+import { ISessionDocument } from "../models/session";
 
 interface IUser {
 	email: string;

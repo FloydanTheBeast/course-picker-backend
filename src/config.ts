@@ -13,6 +13,8 @@ dotenv.config({
 
 const env = validateEnv(process.env);
 
+global.isProd = Boolean(process.env.PROD);
+
 const config = {
 	server: {
 		host: "localhost",
