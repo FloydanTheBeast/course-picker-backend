@@ -1,21 +1,11 @@
-import {Request, Response} from "express";
-import {CourseModel} from "../models";
-import cheerio from 'cheerio';
-import {
-	Body,
-	HeaderParam,
-	JsonController,
-	Get,
-	Req,
-	Res
-} from "routing-controllers";
-import {ICourse} from "../interfaces";
+import { Request, Response } from "express";
+import { Get, JsonController, Req, Res } from "routing-controllers";
+import { ICourse } from "../interfaces";
+import { CourseModel } from "../models";
+import { openeduParser } from "../parsers/OpeneduParser";
 import BaseController from "./BaseController";
-import {get} from "../utils/request"
-import {ICourseDocument, ICourseModel} from "../models/course";
-import {openeduParser} from "../parsers/OpeneduParser";
 
-const gc = require('expose-gc/function');
+const gc = require("expose-gc/function");
 
 @JsonController("/parse")
 export default class ParseController extends BaseController<ICourse> {
@@ -30,12 +20,8 @@ export default class ParseController extends BaseController<ICourse> {
 		@Req() req: Request,
 		@Res() res: Response
 	): Promise<any | Response> {
-		return await openeduParser.parseCourses(true)
-			.then(courses => {
-					return res
-						.status(200)
-						.send(courses);
-				}
-			);
+		return await openeduParser.parseCourses(true).then((courses) => {
+			return res.status(200).send(courses);
+		});
 	}
 }

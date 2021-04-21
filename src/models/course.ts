@@ -1,10 +1,7 @@
-import {Document, Model, model, Schema} from "mongoose";
-import {ICourse} from "../interfaces";
+import { Document, Model, model, Schema } from "mongoose";
+import { ICourse } from "../interfaces";
 
-
-export interface ICourseDocument extends ICourse, Document {
-
-}
+export interface ICourseDocument extends ICourse, Document {}
 
 export type ICourseModel = Model<ICourseDocument>;
 
@@ -42,8 +39,8 @@ const CourseSchema = new Schema<ICourseDocument>({
 		type: {
 			name: String,
 			link: String,
-			icon: String,
-		},
+			icon: String
+		}
 	},
 	duration: {
 		type: String,
@@ -60,24 +57,24 @@ const CourseSchema = new Schema<ICourseDocument>({
 	groups: {
 		type: {
 			title: String,
-			code: String,
-		},
+			code: String
+		}
 	},
 	price: {
 		type: Number,
 		required: true
-	},
+	}
 });
 
 CourseSchema.pre("save", function (next) {
 	const course = this;
-	Course.findOne({id: course.id}).then((existingCourse) => {
-		if (existingCourse == null)
+	Course.findOne({ id: course.id }).then((existingCourse) => {
+		if (existingCourse == null) {
 			return next();
-		else
-			Course.findOneAndDelete({id: course.id}).then(() => next());
-	})
-
+		} else {
+			Course.findOneAndDelete({ id: course.id }).then(() => next());
+		}
+	});
 });
 
 const Course = model<ICourseDocument, ICourseModel>("Course", CourseSchema);

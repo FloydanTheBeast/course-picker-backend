@@ -1,7 +1,12 @@
 import "reflect-metadata";
 import App from "./app";
 import config from "./config";
-import {AuthController, ParseController, CourseController} from "./controllers";
+import {
+	AuthController,
+	CourseController,
+	ParseController
+} from "./controllers";
+import logger from "./utils/logger";
 
 const app = new App({
 	cors: true,
@@ -10,7 +15,7 @@ const app = new App({
 });
 
 app.listen(config.server.port, () => {
-	console.log(
+	logger.success(
 		`Server started at ${config.server.host}:${config.server.port}`
 	);
 });
