@@ -10,7 +10,7 @@ import logger from "./utils/logger";
 
 const app = new App({
 	cors: true,
-	middlewares: [__dirname + "/middlewares/**/*.ts"],
+	middlewares: [__dirname + "/middlewares/**/*.*(ts|js)"],
 	controllers: [AuthController, ParseController, CourseController]
 });
 
