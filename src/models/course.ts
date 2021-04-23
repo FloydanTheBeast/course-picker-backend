@@ -13,14 +13,17 @@ const CourseSchema = new Schema<ICourseDocument>({
 	},
 	courseName: {
 		type: String,
+		text: true,
 		required: true
 	},
 	description: {
 		type: String,
+		text: true,
 		required: true
 	},
 	shortDescription: {
 		type: String,
+		text: true,
 		required: true
 	},
 	link: {
@@ -48,6 +51,7 @@ const CourseSchema = new Schema<ICourseDocument>({
 	},
 	courseLanguages: {
 		type: [String],
+		text: true,
 		required: true
 	},
 	creationDate: {

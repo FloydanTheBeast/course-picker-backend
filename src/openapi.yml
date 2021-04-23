@@ -175,12 +175,21 @@ paths:
           schema:
             type: integer
             default: 10
+            example : 1
         - in: query
           name: pageNumber
           description: "Номер страницы"
           schema:
             type: integer
             default: 1
+            example : 1
+        - in: query
+          name: searchQuery
+          description: "Поисковый запрос"
+          schema:
+            type: string
+            default: ""
+            example: "программирование"
       responses:
         200:
           description: "Успешный запрос на получение курсов"
@@ -191,7 +200,7 @@ paths:
                   nextPage:
                     type: string
                     nullable: true
-                    example: "/courses/?pageSize=10&pageNumber=2"
+                    example: "/courses/?pageSize=10&pageNumber=2&searchQuery=программирование"
                   courses:
                     type: array
                     items:
@@ -314,8 +323,8 @@ components:
       properties:
         courseLanguages:
           $ref: "#/components/schemas/CourseLanguages"
-        _id:
-          $ref: "#/components/schemas/ObjectId"
+        #_id:
+        #  $ref: "#/components/schemas/ObjectId"
         id:
           $ref: "#/components/schemas/CourseId"
         courseName:

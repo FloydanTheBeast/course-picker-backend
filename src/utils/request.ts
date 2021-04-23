@@ -1,11 +1,12 @@
 import http from "https";
+import iconv from "iconv-lite";
 
 export function get(url: string, headers: any = {}) {
 	return new Promise<string>((resolve, reject) => {
 		http.get(
 			url,
 			{
-				headers: headers
+				headers: headers,
 			},
 			(resp: any) => {
 				let data = "";
