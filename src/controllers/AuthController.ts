@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { validationResult } from "express-validator";
 import {
+	Authorized,
 	Body,
 	HeaderParam,
 	JsonController,
@@ -172,5 +173,11 @@ export default class AuthController extends BaseController<IUser> {
 					})
 				);
 			});
+	}
+
+	@Authorized()
+	@Post("/auth-test")
+	public async authTest(@Res() res: Response): Promise<any> {
+		return res.status(200).jsonp({ status: "Success" });
 	}
 }
