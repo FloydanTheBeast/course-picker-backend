@@ -48,15 +48,19 @@ class App {
 
 		useExpressServer(this.server, {
 			authorizationChecker: async (action: Action): Promise<boolean> => {
-				const token = action.request.headers["authorization"].split(
-					" "
-				)[1];
-				try {
-					jwt.verify(token, config.server.jwtSecret);
-					return true;
-				} catch (error) {
-					return false;
+				const authHeader = action.request.headers["authorization"];
+
+				if (authHeader && typeof authHeader === "string") {
+					const token = authHeader.split(" ")[1];
+					try {
+						jwt.verify(token, config.server.jwtSecret);
+						return true;
+					} catch (error) {
+						return false;
+					}
 				}
+
+				return false;
 			},
 			defaultErrorHandler: false,
 			...options
