@@ -270,11 +270,11 @@ components:
     CourseDescription:
       description: "Полное описание курса"
       type: string
-      example: "Короткое описание курса"
+      example: "Полное описание курса"
     CourseShortDescription:
       description: "Короткое описание курса"
       type: string
-      example: "Полное описание курса"
+      example: "Короткое описание курса"
     CourseLink:
       description: "Ссылка на курс"
       type: string

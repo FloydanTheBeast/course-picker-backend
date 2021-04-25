@@ -36,7 +36,7 @@ export default class CourseController extends BaseController<ICourse> {
 				$meta: "textScore"
 			};
 			params.searchQuery = searchQuery;
-			sortConditions = { score: { $meta: "textScore" } };
+			sortConditions = { score: { $meta: "textScore" }, id: -1 };
 		}
 
 		const dataObject = await this.getDocumentsWithPagination(params, findConditions, projection, sortConditions);
