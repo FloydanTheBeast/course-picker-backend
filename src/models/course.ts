@@ -62,7 +62,10 @@ const CourseSchema = new Schema<ICourseDocument>({
 		type: [Number]
 	},
 	price: {
-		type: Number,
+		type: {
+			amount : Number,
+			currency: String
+		},
 		required: true
 	}
 });

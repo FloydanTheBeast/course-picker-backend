@@ -3,6 +3,7 @@ import App from "./app";
 import config from "./config";
 import {
 	AuthController,
+	CategoryController,
 	CourseController,
 	ParseController
 } from "./controllers";
@@ -11,7 +12,7 @@ import logger from "./utils/logger";
 const app = new App({
 	cors: true,
 	middlewares: [__dirname + "/middlewares/**/*.*(ts|js)"],
-	controllers: [AuthController, ParseController, CourseController]
+	controllers: [AuthController, ParseController, CourseController, CategoryController]
 });
 
 app.listen(config.server.port, () => {

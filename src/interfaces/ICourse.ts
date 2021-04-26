@@ -8,7 +8,7 @@ interface ICourse {
 	vendor: string;
 	author: object;
 	duration: string;
-	price: number;
+	price: { [k : string] : any};
 	courseLanguages: string[];
 	categories: number[];
 }

@@ -3,6 +3,7 @@ import { Get, JsonController, Req, Res } from "routing-controllers";
 import { ICourse } from "../interfaces";
 import { CourseModel } from "../models";
 import BaseController from "./BaseController";
+import { objectToQueryString } from "../utils/urlencoder";
 
 const gc = require("expose-gc/function");
 
@@ -94,14 +95,4 @@ export default class CourseController extends BaseController<ICourse> {
 				});
 		});
 	}
-}
-
-function objectToQueryString(obj: any) {
-	var str = [];
-	for (var p in obj) {
-		if (obj.hasOwnProperty(p)) {
-			str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
-		}
-	}
-	return str.join("&");
 }
