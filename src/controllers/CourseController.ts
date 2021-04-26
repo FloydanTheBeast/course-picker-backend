@@ -31,12 +31,26 @@ export default class CourseController extends BaseController<ICourse> {
 
 		if (req.query.searchQuery) {
 			const searchQuery = req.query.searchQuery.toString();
-			findConditions = { $text: { $search: searchQuery } };
+			findConditions["$text"] = { $search: searchQuery };
 			projection.textScore = {
 				$meta: "textScore"
 			};
 			params.searchQuery = searchQuery;
 			sortConditions = { score: { $meta: "textScore" }, id: -1 };
+		}
+
+		if (req.query.categories) {
+			findConditions["$or"] = [];
+			const categories = req.query.categories.toString().split(",");
+			params.categories = [];
+			for (let categoryKey in categories) {
+				const category = parseInt(categories[categoryKey]);
+				if (!isNaN(category)) {
+					params.categories.push(category);
+					findConditions["$or"].push({categories: category});
+				}
+			}
+			params.categories = params.categories.join(',');
 		}
 
 		const dataObject = await this.getDocumentsWithPagination(params, findConditions, projection, sortConditions);
@@ -55,17 +69,24 @@ export default class CourseController extends BaseController<ICourse> {
 		}
 
 		return await this.courseModel.find(findConditions).countDocuments().then((count) => {
+			const currentPageNumber = params.pageNumber > 0 ? parseInt(params.pageNumber) : 1;
+			params.pageSize = params.pageSize > 0 ? parseInt(params.pageSize) : 10;
+
 			return this.courseModel
 				.find(findConditions, projection)
 				.sort(sortConditions)
-				.skip(params.pageNumber > 0 ? (params.pageNumber - 1) * params.pageSize : 0)
-				.limit(params.pageSize > 0 ? params.pageSize : 10)
+				.skip(currentPageNumber > 0 ? (currentPageNumber - 1) * params.pageSize : 0)
+				.limit(params.pageSize)
 				.then((data) => {
 					const dataObject: { [k: string]: any } = {};
 
 					if (count > params.pageNumber * params.pageSize) {
-						params.pageNumber += 1;
+						params.pageNumber = currentPageNumber + 1;
 						dataObject.nextPage = `/courses/?` + objectToQueryString(params);
+					}
+					params.pageNumber = Math.min(currentPageNumber - 1, (count >= 1 ? count - 1 : 0) / params.pageSize + 1);
+					if (params.pageNumber > 0 && params.pageNumber != currentPageNumber) {
+						dataObject.previousPage = `/courses/?` + objectToQueryString(params);
 					}
 					dataObject.courses = data;
 

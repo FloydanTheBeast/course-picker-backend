@@ -58,11 +58,8 @@ const CourseSchema = new Schema<ICourseDocument>({
 		type: Date,
 		default: Date.now
 	},
-	groups: {
-		type: {
-			title: String,
-			code: String
-		}
+	categories: {
+		type: [Number]
 	},
 	price: {
 		type: Number,

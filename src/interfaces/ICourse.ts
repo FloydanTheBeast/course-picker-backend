@@ -10,7 +10,7 @@ interface ICourse {
 	duration: string;
 	price: number;
 	courseLanguages: string[];
-	creationDate: Date;
+	categories: number[];
 }
 
 export default ICourse;
