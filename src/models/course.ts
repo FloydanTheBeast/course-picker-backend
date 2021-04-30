@@ -44,8 +44,8 @@ const CourseSchema = new Schema<ICourseDocument>({
 	},
 	author: {
 		type: {
+			id: String,
 			name: String,
-			link: String,
 			icon: String
 		}
 	},
