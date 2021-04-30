@@ -35,7 +35,11 @@ const CourseSchema = new Schema<ICourseDocument>({
 		required: true
 	},
 	vendor: {
-		type: String,
+		type: {
+			id : String,
+			name : String,
+			icon : String
+		},
 		required: true
 	},
 	author: {
@@ -65,6 +69,13 @@ const CourseSchema = new Schema<ICourseDocument>({
 		type: {
 			amount : Number,
 			currency: String
+		},
+		required: true
+	},
+	rating: {
+		type: {
+			averageScore : Number,
+			countReviews: Number
 		},
 		required: true
 	}
