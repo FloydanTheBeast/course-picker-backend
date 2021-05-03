@@ -79,6 +79,10 @@ paths:
                     $ref: "#/components/schemas/JWT"
                   refreshToken:
                     $ref: "#/components/schemas/JWT"
+                  user:
+                      allOf:
+                        - $ref: "#/components/schemas/UserName"
+                        - $ref: "#/components/schemas/UserEmail"
         401:
           description: "Неверные учётные данные"
           content:

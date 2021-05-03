@@ -95,7 +95,13 @@ export default class AuthController extends BaseController<IUser> {
 						return existingUser
 							.generateTokenPair()
 							.then((tokenPair) => {
-								return res.status(200).json(tokenPair);
+								return res.status(200).json({
+									...tokenPair,
+									user: {
+										email: existingUser.email,
+										username: existingUser.username
+									}
+								});
 							})
 							.catch((error) => {
 								throw error;
