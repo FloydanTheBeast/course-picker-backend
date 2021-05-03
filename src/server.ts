@@ -5,14 +5,15 @@ import {
 	AuthController,
 	CategoryController,
 	CourseController,
-	ParseController
+	ParseController, ReviewController, UserController
 } from "./controllers";
 import logger from "./utils/logger";
 
 const app = new App({
 	cors: true,
 	middlewares: [__dirname + "/middlewares/**/*.*(ts|js)"],
-	controllers: [AuthController, ParseController, CourseController, CategoryController]
+	controllers: [AuthController, ParseController, CourseController,
+		CategoryController, UserController, ReviewController]
 });
 
 app.listen(config.server.port, () => {

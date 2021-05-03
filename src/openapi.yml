@@ -8,16 +8,22 @@ tags:
     description: "Методы для регистрации, авторизации, логаута и обновления токенов"
   - name: "courses"
     description: "Получение курсов"
+  - name: "categories"
+    description: "Методы для работы с категориями"
+  - name: "reviews"
+    description: "Методы управления отзывами"
+  - name: "users"
+    description: "Методы управления настройками пользователя. (Например, избранное, просмотренное)"
 paths:
   /auth/signup:
     post:
       tags:
-      - auth
+        - auth
       summary: Регистрация новго пользователя
       requestBody:
         required: true
         description: Данные пользователя для добавления в базу данных
-        content: 
+        content:
           application/json:
             schema:
               $ref: "#/components/schemas/UserSignup"
@@ -50,8 +56,8 @@ paths:
                     type: string
   /auth/signin:
     post:
-      tags: 
-      - auth
+      tags:
+        - auth
       summary: "Аутентификация пользователя"
       requestBody:
         required: true
@@ -79,13 +85,13 @@ paths:
             application/json:
               schema:
                 properties:
-                  error: 
+                  error:
                     type: string
                     example: "Пользователя с таким логином/почтой не существует"
   /auth/refresh-token:
     post:
       tags:
-      - auth
+        - auth
       summary: "Получение нового JWT access token"
       parameters:
         - in: header
@@ -182,7 +188,14 @@ paths:
           schema:
             type: integer
             default: 1
-            example : 1
+            example : 2
+        - in: query
+          name: categories
+          description: "Список id категорий через запятую"
+          schema:
+            type: string
+            default: ""
+            example: "1,4,7"
         - in: query
           name: searchQuery
           description: "Поисковый запрос"
@@ -197,14 +210,399 @@ paths:
             application/json:
               schema:
                 properties:
-                  nextPage:
+                  previousPage:
+                    description: "Ссылка на предыдущую страницу курсов"
                     type: string
                     nullable: true
-                    example: "/courses/?pageSize=10&pageNumber=2&searchQuery=программирование"
+                    example: "/courses/?pageSize=10&pageNumber=1&categories=1,4,7&searchQuery=программирование"
+                  nextPage:
+                    description: "Ссылка на следующую страницу курсов"
+                    type: string
+                    nullable: true
+                    example: "/courses/?pageSize=10&pageNumber=3&categories=1,4,7&searchQuery=программирование"
+                  countPages:
+                    description: "Общее количество страниц курсов"
+                    type: number
+                    example: 10
                   courses:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Course"
+                      $ref: "#/components/schemas/CoursePreview"
+  /courses/{id}:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - courses
+      summary: "Получение полной информации о курсе"
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: "Id запрашиваемого курса"
+          schema:
+            $ref: "#/components/schemas/CourseId"
+      responses:
+        200:
+          description: "Успешный запрос на получение курса"
+          content:
+            application/json:
+              schema:
+                properties:
+                  isFavourite:
+                    description: "Добавлен ли курс в избранные"
+                    type: boolean
+                    default: false
+                  isViewed:
+                    description: "Добавлен ли курс в просмотренные"
+                    type: boolean
+                    default: false
+                  course:
+                    $ref: "#/components/schemas/Course"
+  /categories/:
+    get:
+      tags:
+        - categories
+      summary: "Получение категорий"
+      responses:
+        200:
+          description: "Успешный запрос на получение категорий"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+  /reviews/:
+    get:
+      tags:
+        - reviews
+      summary: "Получение отзывов к курсу"
+      parameters:
+        - in: query
+          name: id
+          required: true
+          description: "Уникальный id курса"
+          schema:
+            type: string
+            required: true
+            example: openedu_2
+      responses:
+        200:
+          description: "Успешное получение отзывов"
+          content:
+            application/json:
+              schema:
+                properties:
+                  courseId:
+                    type: string
+                    example: "openedu_2"
+                  reviews:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Review"
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - reviews
+      parameters:
+        - in: query
+          name: id
+          required: true
+          description: "Уникальный id курса"
+          schema:
+            type: string
+            required: true
+            example: openedu_2
+      summary: "Добавление отзыва к курсу"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                rating:
+                  type: number
+                  required: true
+                  example: 4
+                text:
+                  type: string
+                  required: true
+                  example: "Достойный курс"
+      responses:
+        201:
+          description: "Успешное добавление отзыва"
+        400:
+          description: "Пользователь уже оставлял отзыв на этот курс"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Пользователь уже оставлял отзыв об этом курсе"
+        401:
+          description: "Требуется корректная авторизация"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Необходима авторизация"
+        404:
+          description: "Курс, к которому добавляется отзыв, - не найден"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Не существует курса с переданным 'id'"
+    delete:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - reviews
+      parameters:
+        - in: query
+          name: reviewId
+          required: true
+          description: "Уникальный id отзыва"
+          schema:
+            type: string
+            required: true
+            example: "608f34dc4fe0f22cb86ebb59"
+      summary: "Удаление отзыва к курсу"
+      responses:
+        200:
+          description: "Успешное удаление отзыва"
+        400:
+          description: "Ошибочный запрос"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Нельзя удалить чужой отзыв"
+        401:
+          description: "Требуется корректная авторизация"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Необходима авторизация"
+  /users/favourite:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - users
+      summary: "Получение списка избранных курсов пользователя"
+      responses:
+        200:
+          description: "Успешное получение списка избранного"
+          content:
+            application/json:
+              schema:
+                properties:
+                  favouriteCourses:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CoursePreview"
+        401:
+          description: "Требуется корректная авторизация"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Необходима авторизация"
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - users
+      summary: "Добавление курса в избранные"
+      parameters:
+        - in: query
+          name: id
+          required: true
+          description: "Id курса для добавления в избранные"
+          schema:
+            $ref: "#/components/schemas/CourseId"
+      responses:
+        201:
+          description: "Успешное добавление курса в избранное"
+          content:
+            application/json:
+              schema:
+                properties:
+                  favouriteCourses:
+                    type: array
+                    items:
+                      type: string
+                    example: [ "openedu_2", "openedu_1" ]
+        401:
+          description: "Требуется корректная авторизация"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Необходима авторизация"
+        404:
+          description: "Курс не найден"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Не найден курс по переданному id"
+    delete:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - users
+      summary: "Удаление курса из избранного"
+      parameters:
+        - in: query
+          name: id
+          required: true
+          description: "Id курса для удаления из избранного"
+          schema:
+            $ref: "#/components/schemas/CourseId"
+      responses:
+        200:
+          description: "Успешное удаление курса из избранного"
+          content:
+            application/json:
+              schema:
+                properties:
+                  favouriteCourses:
+                    type: array
+                    items:
+                      type: string
+                    example: [ "openedu_1" ]
+        401:
+          description: "Требуется корректная авторизация"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Необходима авторизация"
+  /users/viewed:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - users
+      summary: "Получение списка просмотренных курсов пользователя"
+      responses:
+        200:
+          description: "Успешное получение списка просмотренных"
+          content:
+            application/json:
+              schema:
+                properties:
+                  viewedCourses:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CoursePreview"
+        401:
+          description: "Требуется корректная авторизация"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Необходима авторизация"
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - users
+      summary: "Добавление курса в просмотренные"
+      parameters:
+        - in: query
+          name: id
+          required: true
+          description: "Id курса для добавления в просмотренные"
+          schema:
+            $ref: "#/components/schemas/CourseId"
+      responses:
+        201:
+          description: "Успешное добавление курса в просмотренные"
+          content:
+            application/json:
+              schema:
+                properties:
+                 viewedCourses:
+                    type: array
+                    items:
+                      type: string
+                    example: [ "openedu_2", "openedu_1" ]
+        401:
+          description: "Требуется корректная авторизация"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Необходима авторизация"
+        404:
+          description: "Курс не найден"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Не найден курс по переданному id"
+    delete:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - users
+      summary: "Удаление курса из просмотренного"
+      parameters:
+        - in: query
+          name: id
+          required: true
+          description: "Id курса для удаления из просмотренного"
+          schema:
+            $ref: "#/components/schemas/CourseId"
+      responses:
+        200:
+          description: "Успешное удаление курса из просмотренного"
+          content:
+            application/json:
+              schema:
+                properties:
+                  viewedCourses:
+                    type: array
+                    items:
+                      type: string
+                    example: [ "openedu_1" ]
+        401:
+          description: "Требуется корректная авторизация"
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                    example: "Необходима авторизация"
 components:
   schemas:
     ObjectId:
@@ -233,7 +631,7 @@ components:
     UserSignup:
       allOf:
         - $ref: "#/components/schemas/UserEmail"
-        - $ref: "#/components/schemas/UserName" 
+        - $ref: "#/components/schemas/UserName"
         - $ref: "#/components/schemas/UserPassword"
       required: ["email", "username", "password"]
     UserEmailLogin:
@@ -249,10 +647,29 @@ components:
         - $ref: "#/components/schemas/UserPassword"
       required: ["username", "password"]
     JWT:
-      description: "Схема для описания JWT токена"   
+      description: "Схема для описания JWT токена"
       type: string
       format: JWT
       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.he0ErCNloe4J7Id0Ry2SEDg09lKkZkfsRiGsdX_vgEg"
+    Category:
+      description: "Категория курсов"
+      type: object
+      properties:
+        id:
+          description: "Уникальный id категории"
+          type: integer
+          example: 1
+        name:
+          type: object
+          properties:
+            ru:
+              description: "Русское название категории"
+              type: string
+              example: "Бизнес"
+            en:
+              description: "Английское название категории"
+              type: string
+              example: "Business"
     CourseLanguages:
       description: "Массив языков курсов"
       type: array
@@ -283,10 +700,50 @@ components:
       description: "Ссылка на картинку с превью курса"
       type: string
       example: "https://cdn.openedu.ru/f1367c/CACHE/images/cover/itmo_web_s/71c221bca9f9ad3ad57b257ae0ede1e2.png"
+    CourseRating:
+      description: "Рейтинг курса"
+      type: object
+      properties:
+        external:
+          description: "Внешний рейтинг курса (на сайте поставщика)"
+          type: object
+          properties:
+            averageScore:
+              type: number
+              example: 4.52
+            countReviews:
+              type: integer
+              example: 21
+        internal:
+          description: "Внутренний рейтинг курса"
+          type: object
+          properties:
+            averageScore:
+              type: number
+              example: 4.75
+            countReviews:
+              type: integer
+              example: 5
     CourseVendor:
       description: "Платформа-поставщик курса"
-      type: string
-      example: "openedu"
+      type: object
+      properties:
+        id:
+          description: "Id поставщика"
+          type: string
+          example: "openedu"
+        name:
+          description: "Название поставщика"
+          type: string
+          example: "OpenEdu"
+        link:
+          description: "Ссылка на главную страницу поставщика"
+          type: string
+          example: "https://openedu.ru/"
+        icon:
+          description: "Ссылка на логотип поставщика"
+          type: string
+          example: "https://mooc.ij.je/public_files/img/vendors/openedu.png"
     CourseAuthorName:
       description: "Название/имя автора курса"
       type: string
@@ -315,8 +772,46 @@ components:
       example: "10w"
     CoursePrice:
       description: "Цена курса"
-      type: string
-      example: "0"
+      type: object
+      properties:
+        amount:
+          description: "Цена курса"
+          type: number
+          example: 1200.50
+        currency:
+          description: "Валюта, в которой указана цена курса"
+          type: string
+          example: "RUB"
+    CoursePreview:
+      description: "Схема для описания курса"
+      type: object
+      properties:
+        courseLanguages:
+          $ref: "#/components/schemas/CourseLanguages"
+        id:
+          $ref: "#/components/schemas/CourseId"
+        courseName:
+          $ref: "#/components/schemas/CourseName"
+        shortDescription:
+          $ref: "#/components/schemas/CourseShortDescription"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+        link:
+          $ref: "#/components/schemas/CourseLink"
+        previewImageLink:
+          $ref: "#/components/schemas/CoursePreviewImageLink"
+        rating:
+          $ref: "#/components/schemas/CourseRating"
+        vendor:
+          $ref: "#/components/schemas/CourseVendor"
+        author:
+          $ref: "#/components/schemas/CourseAuthor"
+        duration:
+          $ref: "#/components/schemas/CourseDuration"
+        price:
+          $ref: "#/components/schemas/CoursePrice"
     Course:
       description: "Схема для описания курса"
       type: object
@@ -333,10 +828,24 @@ components:
           $ref: "#/components/schemas/CourseDescription"
         shortDescription:
           $ref: "#/components/schemas/CourseShortDescription"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
         link:
           $ref: "#/components/schemas/CourseLink"
         previewImageLink:
           $ref: "#/components/schemas/CoursePreviewImageLink"
+        rating:
+          $ref: "#/components/schemas/CourseRating"
+        reviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/Review"
+        countViews:
+          type: number
+          description: "Внутренний счетчик просмотров страницы курса"
+          example: 24
         vendor:
           $ref: "#/components/schemas/CourseVendor"
         author:
@@ -345,3 +854,31 @@ components:
           $ref: "#/components/schemas/CourseDuration"
         price:
           $ref: "#/components/schemas/CoursePrice"
+    Review:
+      description: "Отзыв на курс"
+      type: object
+      properties:
+        rating:
+          type: number
+          example: 4.5
+        text:
+          type: string
+          example: "Курс отличный и по своему интересный"
+        creationDate:
+          type: string
+          example: "2021-05-02T21:22:52.103Z"
+        user:
+          type: object
+          properties:
+            username:
+              type: string
+              example: "NoobMaster68"
+        id:
+          description: "Уникальный id отзыва"
+          type: string
+          example: "608f182c469f7993401da797"
+  securitySchemes:
+    bearerAuth: # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

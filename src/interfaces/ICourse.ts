@@ -8,6 +8,7 @@ interface ICourse {
 	vendor:  {
 		id : string,
 		name : string,
+		link : string,
 		icon : string
 	}
 	author: object;
@@ -25,6 +26,7 @@ interface ICourse {
 	};
 	courseLanguages: string[];
 	categories: number[];
+	countViews?: number;
 }
 
 export default ICourse;

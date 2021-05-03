@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Body, Get, JsonController, Post, Req, Res } from "routing-controllers";
+import { Authorized, Body, Get, JsonController, Post, Req, Res } from "routing-controllers";
 import { ICategory, ICourse, IUser } from "../interfaces";
 import { CategoryModel } from "../models";
 import BaseController from "./BaseController";

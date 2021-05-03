@@ -32,6 +32,14 @@ const UserSchema = new Schema<IUserDocument>({
 		unique: true
 	},
 	password: String,
+	favouriteCourses: {
+		type: Array,
+		default: []
+	},
+	viewedCourses: {
+		type: Array,
+		default: []
+	},
 	registrationDate: {
 		type: Date,
 		default: Date.now

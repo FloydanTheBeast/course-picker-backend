@@ -46,6 +46,7 @@ const CourseSchema = new Schema<ICourseDocument>({
 		type: {
 			id: String,
 			name: String,
+			link: String,
 			icon: String
 		}
 	},
@@ -78,6 +79,10 @@ const CourseSchema = new Schema<ICourseDocument>({
 			countReviews: Number
 		},
 		required: true
+	},
+	countViews: {
+		type: Number,
+		default: 0
 	}
 });
 

@@ -55,6 +55,7 @@ export class OpeneduParser implements IParser {
 					vendor: {
 						id: "openedu",
 						name: "OpenEdu",
+						link: "https://openedu.ru/",
 						icon : "https://mooc.ij.je/public_files/img/vendors/openedu.png",
 					},
 					author: {

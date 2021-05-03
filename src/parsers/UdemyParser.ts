@@ -82,6 +82,7 @@ export class UdemyParser implements IParser {
 										vendor: {
 											id: "udemy",
 											name: "Udemy",
+											link: "https://www.udemy.com/",
 											icon : "https://mooc.ij.je/public_files/img/vendors/udemy.png",
 										},
 										author: {
