@@ -47,11 +47,15 @@ export default class AuthController extends BaseController<IUser> {
 
 		return await this.userModel
 			// TODO: Поиск по логину
-			.findOne({ email: userData.email })
+			.findOne({
+				$or: [
+					{ email: userData.email },
+					{ username: userData.username }
+				]
+			})
 			.exec()
 			.then((existingUser) => {
 				if (existingUser) {
-					// FIXME: Отправлять осмысленную ошибку
 					return res
 						.status(400)
 						.json({ error: "Пользователь уже существует" });
