@@ -11,7 +11,11 @@ interface ICourse {
 		link : string,
 		icon : string
 	}
-	author: object;
+	author: {
+		name: string,
+		link: string,
+		icon: string
+	};
 	duration: string;
 	price: { [k : string] : any};
 	rating: {
@@ -26,7 +30,7 @@ interface ICourse {
 	};
 	courseLanguages: string[];
 	categories: number[];
-	countViews?: number;
+	countViews?: 0;
 }
 
 export default ICourse;

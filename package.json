@@ -7,6 +7,7 @@
 		"test": "mocha --opts ./mocha.opts"
 	},
 	"dependencies": {
+		"axios": "^0.21.1",
 		"body-parser": "^1.19.0",
 		"cheerio": "^1.0.0-rc.6",
 		"class-transformer": "^0.4.0",

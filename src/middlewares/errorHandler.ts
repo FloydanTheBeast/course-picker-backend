@@ -14,7 +14,7 @@ export class HttpErrorHandler implements ExpressErrorMiddlewareInterface {
 		res: Response,
 		next: (err?: Error) => any
 	): void {
-		logger.error(error.message);
+		logger.error(error.name);
 
 		if (error instanceof UnauthorizedError) {
 			res.status(401).json({

@@ -1,3 +1,24 @@
+export const courseraCategoryMap: { [k: string]: number } = {
+	"Business": 1,
+	"Computer Science": 4,
+	"Data Science": 4,
+	"Health": 14,
+	"Social Sciences": 8,
+	"Information Technology": 4,
+	"Physical Science and Engineering": 7,
+	"Arts and Humanities": 8,
+	"Language Learning": 9,
+	"Personal Development": 13,
+	"Math and Logic": 10
+};
+
+export const courseraDurationMap: { [k: string]: string } = {
+	"1-3 Months": "4w",
+	"1-4 Weeks": "1w",
+	"3+ Months": "12w",
+	"Less Than 2 Hours": "1h",
+};
+
 export const udemyCategoryMap: { [k: string]: object } = {
 	"Business": { categoryId: 1, subcategory: false },
 	"Design": { categoryId: 6, subcategory: false },

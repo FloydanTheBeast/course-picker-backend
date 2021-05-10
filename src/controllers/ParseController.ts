@@ -5,6 +5,7 @@ import { CourseModel } from "../models";
 import { openeduParser } from "../parsers/OpeneduParser";
 import BaseController from "./BaseController";
 import { udemyParser } from "../parsers/UdemyParser";
+import { courseraParser } from "../parsers/CourseraParser";
 
 const gc = require("expose-gc/function");
 
@@ -33,6 +34,16 @@ export default class ParseController extends BaseController<ICourse> {
 	): Promise<any | Response> {
 		return await udemyParser.parseCourses(true).then((courses) => {
 			return res.status(200).send(courses);
+		});
+	}
+
+	@Get("/courses/coursera")
+	public async getCourseraCourses(
+		@Req() req: Request,
+		@Res() res: Response
+	): Promise<any | Response> {
+		return await courseraParser.parseCourses(true).then((courses) => {
+			return res.status(200).send("ok");
 		});
 	}
 }

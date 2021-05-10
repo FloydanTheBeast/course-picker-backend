@@ -6,7 +6,7 @@ import BaseController from "./BaseController";
 import Category, { ICategoryDocument } from "../models/category";
 
 @JsonController("/categories")
-export default class CourseController extends BaseController<ICourse> {
+export default class CategoryController extends BaseController<ICourse> {
 
 	constructor() {
 		super();

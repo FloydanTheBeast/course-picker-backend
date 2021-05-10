@@ -56,7 +56,7 @@ export class OpeneduParser implements IParser {
 						id: "openedu",
 						name: "OpenEdu",
 						link: "https://openedu.ru/",
-						icon : "https://mooc.ij.je/public_files/img/vendors/openedu.png",
+						icon : "https://api.mooc.ij.je/public_files/img/vendors/openedu.png",
 					},
 					author: {
 						name: dataUni[dataCourses[key]["uni"]]["abbr"],
@@ -81,7 +81,8 @@ export class OpeneduParser implements IParser {
 							"averageScore" : 0,
 							"countReviews" : 0
 						}
-					}
+					},
+					countViews: 0
 				};
 				courses.push(courseData);
 			}
@@ -104,6 +105,7 @@ export class OpeneduParser implements IParser {
 										.then((existingCourse) => {
 											if (existingCourse) {
 												updatedCourse.rating.internal = existingCourse.rating.internal;
+												updatedCourse.countViews = existingCourse.countViews;
 											}
 											CourseModel.updateOne(
 												{ id: updatedCourse.id },

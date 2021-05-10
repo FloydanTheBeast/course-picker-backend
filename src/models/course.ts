@@ -82,6 +82,7 @@ const CourseSchema = new Schema<ICourseDocument>({
 	},
 	countViews: {
 		type: Number,
+		required: true,
 		default: 0
 	}
 });

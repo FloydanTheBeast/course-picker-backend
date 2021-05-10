@@ -10,6 +10,8 @@ tags:
     description: "Получение курсов"
   - name: "categories"
     description: "Методы для работы с категориями"
+  - name: "compilations"
+    description: "Методы для работы с подборками"
   - name: "reviews"
     description: "Методы управления отзывами"
   - name: "users"
@@ -80,9 +82,9 @@ paths:
                   refreshToken:
                     $ref: "#/components/schemas/JWT"
                   user:
-                      allOf:
-                        - $ref: "#/components/schemas/UserName"
-                        - $ref: "#/components/schemas/UserEmail"
+                    allOf:
+                      - $ref: "#/components/schemas/UserName"
+                      - $ref: "#/components/schemas/UserEmail"
         401:
           description: "Неверные учётные данные"
           content:
@@ -232,6 +234,26 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/CoursePreview"
+  /courses/main:
+    get:
+      tags:
+        - courses
+      summary: "Получение информации на главной странице"
+      responses:
+        200:
+          description: "Успешный запрос на получение информации"
+          content:
+            application/json:
+              schema:
+                properties:
+                  compilations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Compilation"
+                  courses:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CoursePreview"
   /courses/{id}:
     get:
       security:
@@ -277,6 +299,20 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Category"
+  /compilations/:
+    get:
+      tags:
+        - compilations
+      summary: "Получение подборок"
+      responses:
+        200:
+          description: "Успешный запрос на получение подборок"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Compilation"
   /reviews/:
     get:
       tags:
@@ -290,7 +326,7 @@ paths:
           schema:
             type: string
             required: true
-            example: openedu_2
+            example: openedu_cr2
       responses:
         200:
           description: "Успешное получение отзывов"
@@ -300,7 +336,7 @@ paths:
                 properties:
                   courseId:
                     type: string
-                    example: "openedu_2"
+                    example: "openedu_cr2"
                   reviews:
                     type: array
                     items:
@@ -318,7 +354,7 @@ paths:
           schema:
             type: string
             required: true
-            example: openedu_2
+            example: openedu_cr2
       summary: "Добавление отзыва к курсу"
       requestBody:
         content:
@@ -440,7 +476,7 @@ paths:
           schema:
             $ref: "#/components/schemas/CourseId"
       responses:
-        201:
+        200:
           description: "Успешное добавление курса в избранное"
           content:
             application/json:
@@ -450,7 +486,7 @@ paths:
                     type: array
                     items:
                       type: string
-                    example: [ "openedu_2", "openedu_1" ]
+                    example: [ "openedu_cr2", "openedu_cr1" ]
         401:
           description: "Требуется корректная авторизация"
           content:
@@ -493,7 +529,7 @@ paths:
                     type: array
                     items:
                       type: string
-                    example: [ "openedu_1" ]
+                    example: [ "openedu_cr1" ]
         401:
           description: "Требуется корректная авторизация"
           content:
@@ -544,7 +580,7 @@ paths:
           schema:
             $ref: "#/components/schemas/CourseId"
       responses:
-        201:
+        200:
           description: "Успешное добавление курса в просмотренные"
           content:
             application/json:
@@ -554,7 +590,7 @@ paths:
                     type: array
                     items:
                       type: string
-                    example: [ "openedu_2", "openedu_1" ]
+                    example: [ "openedu_cr2", "openedu_cr1" ]
         401:
           description: "Требуется корректная авторизация"
           content:
@@ -597,7 +633,7 @@ paths:
                     type: array
                     items:
                       type: string
-                    example: [ "openedu_1" ]
+                    example: [ "openedu_cr1" ]
         401:
           description: "Требуется корректная авторизация"
           content:
@@ -683,7 +719,7 @@ components:
     CourseId:
       description: "Уникальный id курса"
       type: string
-      example: openedu_2
+      example: openedu_cr2
     CourseName:
       description: "Название курса"
       type: string
@@ -881,6 +917,29 @@ components:
           description: "Уникальный id отзыва"
           type: string
           example: "608f182c469f7993401da797"
+    Compilation:
+      description: "Подборка курсов по теме"
+      type: object
+      properties:
+        name:
+          type: object
+          properties:
+            ru:
+              description: "Русское название подборки"
+              type: string
+              example: "Финансы"
+            en:
+              description: "Английское название подборки"
+              type: string
+              example: "Finance"
+        icon:
+          type: string
+          description: "Ссылка на иконку подборки"
+          example: "https://api.mooc.ij.je/public_files/img/compilations/business.png"
+        link:
+          type: string
+          description: "Ссылка на получение курсов из подборки"
+          example: "https://api.mooc.ij.je/?sortViews=-1&pagination=0&pageSize=12&categories=0,1,2"
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme
       type: http

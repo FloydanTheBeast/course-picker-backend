@@ -72,7 +72,7 @@ export default class UserController extends BaseController<IUser> {
 			if (Object.keys(projection).length > 0) {
 				options.push({ $project: projection });
 			}
-			console.log(options);
+
 			return await UserModel
 				.aggregate(options)
 				.then(async (data) => {

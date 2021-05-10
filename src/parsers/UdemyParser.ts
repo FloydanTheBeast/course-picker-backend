@@ -8,34 +8,9 @@ import config from "../config";
 import { udemyCategoryMap } from "./CategoryMap";
 
 const gc = require("expose-gc/function");
+let count = 0;
 
 export class UdemyParser implements IParser {
-	public parseCourses(saveToDB = false): Promise<any> {
-
-
-		//dataCourses = dataGroups = dataUni = dataCovers = undefined;
-		gc();
-
-		let promise = Promise.resolve();
-
-		for (let categoryName in udemyCategoryMap) {
-			promise = promise.then(function() {
-				console.log(categoryName);
-				return new Promise(async function(resolve) {
-					await UdemyParser.getCoursesByCategory(udemyCategoryMap[categoryName], categoryName)
-						.then(async (courses) => {
-							await UdemyParser.parseCoursePages(courses, saveToDB);
-							resolve();
-						});
-				});
-			});
-		}
-
-		return promise.then(function() {
-			return true;
-		});
-	}
-
 	public static async getCoursesByCategory(category: { [k: string]: any }, categoryName: string) {
 		const subCategory = category.subcategory,
 			categoryId = category.categoryId;
@@ -64,9 +39,9 @@ export class UdemyParser implements IParser {
 		do {
 			promise = promise.then(function() {
 				return new Promise(async function(resolve) {
-					await get(url, headers).then(
+					await get(url, headers, "json").then(
 						(data) => {
-							const body = JSON.parse(data);
+							const body = data;
 							next = body.next;
 							console.log(next);
 							url = next;
@@ -83,11 +58,11 @@ export class UdemyParser implements IParser {
 											id: "udemy",
 											name: "Udemy",
 											link: "https://www.udemy.com/",
-											icon : "https://mooc.ij.je/public_files/img/vendors/udemy.png",
+											icon: "https://api.mooc.ij.je/public_files/img/vendors/udemy.png"
 										},
 										author: {
 											name: course["visible_instructors"][0].title,
-											link: "https://www.udemy.com/" + course["visible_instructors"][0].url,
+											link: "https://www.udemy.com" + course["visible_instructors"][0].url,
 											icon: course["visible_instructors"][0]["image_100x100"]
 										},
 										duration: "0s",
@@ -106,7 +81,8 @@ export class UdemyParser implements IParser {
 										price: {
 											amount: course["price_detail"].amount,
 											currency: course["price_detail"].currency
-										}
+										},
+										countViews: 0
 									};
 									courses.push(courseData);
 								}
@@ -138,25 +114,32 @@ export class UdemyParser implements IParser {
 		for (let course of courses) {
 			promise = promise.then(function() {
 				return new Promise(async function(resolve) {
-					await setTimeout(() => resolve(), 50);
+					await setTimeout(() => resolve(), 150);
 					await UdemyParser.parseCoursePage(course)
 						.then((updatedCourse) => {
-							console.log(course.id + ": parsed");
+							count += 1;
+							console.log(course.id + ": parsed, current count: " + count);
 							if (saveToDB) {
 								CourseModel.findOne({ id: updatedCourse.id })
-									.then((existingCourse) => {
+									.then(async (existingCourse) => {
 										if (existingCourse) {
 											updatedCourse.rating.internal = existingCourse.rating.internal;
+											updatedCourse.countViews = existingCourse.countViews;
 										}
-										CourseModel.updateOne(
+										await CourseModel.updateOne(
 											{ id: updatedCourse.id },
 											{ $set: updatedCourse },
-											{ upsert: true }).exec();
+											{ upsert: true }).exec().catch(err => {
+											console.log("--------------------------" + err);
+										});
+										// @ts-ignore
+										updatedCourse = undefined;
+										gc();
 									});
 							}
 						})
 						.catch((err) => {
-							console.log("Udemy request error at course " + course.id + ": " + err.stack)
+							console.log("Udemy request error at course " + course.id + ": " + err.stack);
 						});
 				});
 			});
@@ -174,7 +157,7 @@ export class UdemyParser implements IParser {
 				const $ = cheerio.load(data);
 
 				// Get description
-				const description = $("[data-purpose=\"safely-set-inner-html:description:description\"]");
+				const description = $("[data-purpose=\"safely-set-inner-html:description:description\"] > p");
 
 				function getTextFromParagraphs(node: cheerio.Cheerio) {
 					let str = "";
@@ -182,7 +165,7 @@ export class UdemyParser implements IParser {
 						const txt = $(this).text();
 						str += txt + "\n";
 					});
-					return str;
+					return str.replace(/\\n+/g, "\n");
 				}
 
 				course.description = getTextFromParagraphs(description);
@@ -191,24 +174,25 @@ export class UdemyParser implements IParser {
 				}
 
 				// Get languages
-				const json_schema = JSON.parse($("#schema_markup").children('script')
+				const json_schema = JSON.parse($("#schema_markup").children("script")
 					// @ts-ignore
 					.get()[0].children[0].data.trim());
 				course.courseLanguages.push(json_schema[0].inLanguage);
 
 				// Get duration
-				const props = JSON.parse($('.ud-component--course-landing-page-udlite--curriculum')
+				const props = JSON.parse($(".ud-component--course-landing-page-udlite--curriculum")
 					.get()[0].attribs["data-component-props"]);
 				const seconds = props["estimated_content_length_in_seconds"];
 
-				if (seconds)
+				if (seconds) {
 					course.duration = seconds + "s";
-				else
+				} else {
 					course.duration = "0s";
+				}
 
 
 				// Get external rating
-				const ratingData = JSON.parse($('.ud-component--course-landing-page-udlite--rating')
+				const ratingData = JSON.parse($(".ud-component--course-landing-page-udlite--rating")
 					.get()[0].attribs["data-component-props"]);
 				course.rating.external["averageScore"] = ratingData.rating;
 				course.rating.external["countReviews"] = ratingData["num_reviews"];
@@ -222,6 +206,41 @@ export class UdemyParser implements IParser {
 				return course;
 			}
 		);
+	}
+
+	public parseCourses(saveToDB = false): Promise<any> {
+
+
+		//dataCourses = dataGroups = dataUni = dataCovers = undefined;
+		gc();
+
+		let promise = Promise.resolve();
+		let semaphore = 3;
+		for (let categoryName in udemyCategoryMap) {
+
+			promise = promise.then(async function() {
+				console.log(categoryName);
+				return new Promise(async function(resolve) {
+					if (semaphore > 0) {
+						semaphore--;
+					}
+					if (semaphore == 0) {
+						semaphore = 3;
+						setTimeout(() => resolve(), 300000);
+					}
+					else
+						setTimeout(() => resolve(), 100);
+					await UdemyParser.getCoursesByCategory(udemyCategoryMap[categoryName], categoryName)
+						.then(async (courses) => {
+							await UdemyParser.parseCoursePages(courses, saveToDB);
+						});
+				});
+			});
+		}
+
+		return promise.then(function() {
+			return true;
+		});
 	}
 }
 

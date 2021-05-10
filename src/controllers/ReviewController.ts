@@ -58,17 +58,31 @@ export default class ReviewController extends BaseController<IReview> {
 				if (review.rating >= 1 && review.rating <= 5) {
 					review.text = review.text.trim();
 					if (review.text.length > 0) {
-						return await ReviewModel.find({
+						return await ReviewModel.findOne({
 							userId: review.userId,
 							courseId: review.courseId
-						}).countDocuments()
-							.then((count) => {
-									if (count > 0) {
-										return res.status(400).send({ error: "Пользователь уже оставлял отзыв об этом курсе" });
-									} else {
-										return CourseModel.findOne({ id: review.courseId })
-											.then((course) => {
-												if (course) {
+						})
+							.then((existingReview) => {
+									return CourseModel.findOne({ id: review.courseId })
+										.then((course) => {
+
+											if (course) {
+												if (existingReview) {
+													return ReviewModel.updateOne(
+														{
+															userId: review.userId,
+															courseId: review.courseId
+														}, { $set: review })
+														.then(() => {
+															const averageScore = Number(course.rating.internal.averageScore),
+																countReviews = Number(course.rating.internal.countReviews);
+															course.rating.internal.averageScore = (averageScore * countReviews + Number(review.rating) - Number(existingReview.rating)) / (countReviews);
+
+															return CourseModel.updateOne({ id: review.courseId },
+																{ $set: { "rating.internal": course.rating.internal } })
+																.then(() => res.status(201).send());
+														});
+												} else {
 													return ReviewModel.insertMany([review]).then(() => {
 														const averageScore = Number(course.rating.internal.averageScore),
 															countReviews = Number(course.rating.internal.countReviews);
@@ -76,19 +90,18 @@ export default class ReviewController extends BaseController<IReview> {
 														course.rating.internal.countReviews = countReviews + 1;
 														return CourseModel.updateOne({ id: review.courseId },
 															{ $set: { "rating.internal": course.rating.internal } })
-															.then(() => res.status(201).send());
+															.then(() => res.status(201).send({status : "ok"}));
 													});
 												}
-												return res.status(404).send({ error: "Не существует курса с переданным 'id'" });
-
-											});
-									}
+											}
+											return res.status(404).send({ error: "Не существует курса с переданным 'id'" });
+										});
 								}
 							);
 					}
 					return res.status(400).send({ error: "Свойство 'text' не должно быть пустым" });
 				}
-				return res.status(400).send({ error: "Свойство 'rating' должно быть в отрезке [1, 5]" });
+				return res.status(400).send({ error: "Свойство 'rating' должно быть целым в отрезке [1, 5]" });
 			}
 			return res.status(400).send({ error: "Неправильный формат данных. Не представлен параметр 'id'" });
 		}
@@ -123,8 +136,10 @@ export default class ReviewController extends BaseController<IReview> {
 												return ReviewModel.deleteOne({ _id: reviewId }).then(() => {
 													const averageScore = Number(course.rating.internal.averageScore),
 														countReviews = Number(course.rating.internal.countReviews);
-													course.rating.internal.averageScore = (averageScore * countReviews - Number(rating)) / (countReviews - 1);
+													course.rating.internal.averageScore = countReviews > 1 ?
+														(averageScore * countReviews - Number(rating)) / (countReviews - 1) : 0;
 													course.rating.internal.countReviews = countReviews - 1;
+
 													return CourseModel.updateOne({ id: review.courseId },
 														{ $set: { "rating.internal": course.rating.internal } })
 														.then(() => res.status(200).send());
