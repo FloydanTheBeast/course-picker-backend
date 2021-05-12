@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Course Picker API
   description: Документация backend-приложения платформы рекомендаций массовых онлайн курсов
-  version: 1.0.1
+  version: 1.0.2
 tags:
   - name: "auth"
     description: "Методы для регистрации, авторизации, логаута и обновления токенов"
