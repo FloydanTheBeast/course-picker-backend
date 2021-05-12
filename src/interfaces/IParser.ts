@@ -1,8 +1,8 @@
-import { ICourseDocument } from "../models/course";
+import ICourse from "./ICourse";
 
 abstract class IParser {
-	abstract parseCourses(): Promise<ICourseDocument[]>;
-	abstract parseCourses(saveToDB: boolean): Promise<ICourseDocument[]>;
+	abstract parseCourses(): Promise<ICourse[]>;
+	abstract parseCourses(saveToDB: boolean): Promise<ICourse[]>;
 }
 
 export default IParser;

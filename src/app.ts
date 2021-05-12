@@ -1,5 +1,5 @@
 import express from "express";
-import jwt, { TokenExpiredError } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import path from "path";
 import {
@@ -48,18 +48,19 @@ class App {
 
 		useExpressServer(this.server, {
 			authorizationChecker: async (action: Action): Promise<boolean> => {
-				const token = action.request.headers["authorization"].split(
-					" "
-				)[1];
-				try {
-					jwt.verify(token, config.server.jwtSecret);
-					return true;
-				} catch (error) {
-					if (error instanceof TokenExpiredError) {
-						throw error;
+				const authHeader = action.request.headers["authorization"];
+
+				if (authHeader && typeof authHeader === "string") {
+					const token = authHeader.split(" ")[1];
+					try {
+						jwt.verify(token, config.server.jwtSecret);
+						return true;
+					} catch (error) {
+						return false;
 					}
-					return false;
 				}
+
+				return false;
 			},
 			defaultErrorHandler: false,
 			...options

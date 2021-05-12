@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import {
 	ExpressErrorMiddlewareInterface,
-	Middleware
+	Middleware,
+	UnauthorizedError
 } from "routing-controllers";
 import logger from "../utils/logger";
 
@@ -13,8 +14,17 @@ export class HttpErrorHandler implements ExpressErrorMiddlewareInterface {
 		res: Response,
 		next: (err?: Error) => any
 	): void {
-		logger.error(error);
-		res.status(500).json({ error });
-		next();
+		logger.error(error.name);
+
+		if (error instanceof UnauthorizedError) {
+			res.status(401).json({
+				error: "Необходима авторизация"
+			});
+
+			return;
+		}
+
+		res.status(500).jsonp(error);
+		next(error);
 	}
 }

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { validationResult } from "express-validator";
 import {
+	Authorized,
 	Body,
 	HeaderParam,
 	JsonController,
@@ -46,11 +47,15 @@ export default class AuthController extends BaseController<IUser> {
 
 		return await this.userModel
 			// TODO: Поиск по логину
-			.findOne({ email: userData.email })
+			.findOne({
+				$or: [
+					{ email: userData.email },
+					{ username: userData.username }
+				]
+			})
 			.exec()
 			.then((existingUser) => {
 				if (existingUser) {
-					// FIXME: Отправлять осмысленную ошибку
 					return res
 						.status(400)
 						.json({ error: "Пользователь уже существует" });
@@ -94,7 +99,13 @@ export default class AuthController extends BaseController<IUser> {
 						return existingUser
 							.generateTokenPair()
 							.then((tokenPair) => {
-								return res.status(200).json(tokenPair);
+								return res.status(200).json({
+									...tokenPair,
+									user: {
+										email: existingUser.email,
+										username: existingUser.username
+									}
+								});
 							})
 							.catch((error) => {
 								throw error;
@@ -172,5 +183,11 @@ export default class AuthController extends BaseController<IUser> {
 					})
 				);
 			});
+	}
+
+	@Authorized()
+	@Post("/auth-test")
+	public async authTest(@Res() res: Response): Promise<any> {
+		return res.status(200).jsonp({ status: "Success" });
 	}
 }

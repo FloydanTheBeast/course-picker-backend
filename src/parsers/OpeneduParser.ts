@@ -1,13 +1,14 @@
 import cheerio from "cheerio";
 import { isEmpty } from "class-validator";
-import { IParser } from "../interfaces";
+import { ICourse, IParser } from "../interfaces";
 import { CourseModel } from "../models";
-import { ICourseDocument } from "../models/course";
 import { get } from "../utils/request";
+import { openeduCategoryMap } from "./CategoryMap";
+
 const gc = require("expose-gc/function");
 
-class OpeneduParser implements IParser {
-	public parseCourses(saveToDB = false): Promise<ICourseDocument[]> {
+export class OpeneduParser implements IParser {
+	public parseCourses(saveToDB = false): Promise<ICourse[]> {
 		return get("https://openedu.ru/course/").then((data) => {
 			const $ = cheerio.load(data);
 			let script = "";
@@ -30,28 +31,33 @@ class OpeneduParser implements IParser {
 					script
 						.match(/COVERS = ({(.|\r|\n)*?});/)![1]
 						.replace(/[ \n\r]+/g, " ")
-						.replace(/'/g, '"')
+						.replace(/'/g, "\"")
 				);
 
-			const courses: ICourseDocument[] = [];
+			const courses: ICourse[] = [];
 			for (const key in dataCourses) {
-				const groups = [],
-					courseGroups = dataCourses[key]["groups"];
+				let categories: Set<number> = new Set<number>();
+				const courseGroups: string[] = dataCourses[key]["groups"];
 
 				for (let i = 0; i < courseGroups.length; i++) {
-					if (dataGroups.hasOwnProperty(courseGroups[i])) {
-						groups.push(dataGroups[courseGroups[i]]);
+					if (openeduCategoryMap.hasOwnProperty(courseGroups[i])) {
+						categories.add(openeduCategoryMap[courseGroups[i]]);
 					}
 				}
 
-				const courseData = {
+				const courseData: ICourse = {
 					id: "openedu_" + key,
 					courseName: dataCourses[key]["title"],
 					description: "description",
 					shortDescription: "shortDescription",
 					link: "https://openedu.ru" + dataCourses[key]["url"],
 					previewImageLink: dataCovers[key],
-					vendor: "openedu",
+					vendor: {
+						id: "openedu",
+						name: "OpenEdu",
+						link: "https://openedu.ru/",
+						icon : "https://api.mooc.ij.je/public_files/img/vendors/openedu.png",
+					},
 					author: {
 						name: dataUni[dataCourses[key]["uni"]]["abbr"],
 						link:
@@ -61,11 +67,24 @@ class OpeneduParser implements IParser {
 					},
 					duration: dataCourses[key]["weeks"] + "w",
 					courseLanguages: ["ru"],
-					groups: groups,
-					price: 0
+					categories: [...categories],
+					price: {
+						amount: 0,
+						currency: "RUB"
+					},
+					rating: {
+						external: {
+							"averageScore": 0,
+							"countReviews": 0
+						},
+						internal : {
+							"averageScore" : 0,
+							"countReviews" : 0
+						}
+					},
+					countViews: 0
 				};
-				const course = new CourseModel(courseData);
-				courses.push(course);
+				courses.push(courseData);
 			}
 
 			dataCourses = dataGroups = dataUni = dataCovers = undefined;
@@ -73,86 +92,95 @@ class OpeneduParser implements IParser {
 
 			let promise = Promise.resolve();
 
-			courses.forEach(function (course) {
-				promise = promise.then(function () {
-					return new Promise(async function (resolve) {
-						await setTimeout(() => resolve(), 300);
-						await parseDescription(course).then((updatedCourse) => {
-							console.log(course.id + ": parsed");
-							course = updatedCourse;
-							if (saveToDB) {
-								course.save();
-							}
-						});
-						//console.log(course.id + ": resolved");
-						//resolve();
+			courses.forEach(function(course) {
+				promise = promise.then(function() {
+					return new Promise(async function(resolve) {
+						await setTimeout(() => resolve(), 150);
+						await OpeneduParser.parseDescription(course)
+							.then((updatedCourse) => {
+								course = updatedCourse;
+								console.log(course.id + ": parsed");
+								if (saveToDB) {
+									CourseModel.findOne({ id: updatedCourse.id })
+										.then((existingCourse) => {
+											if (existingCourse) {
+												updatedCourse.rating.internal = existingCourse.rating.internal;
+												updatedCourse.countViews = existingCourse.countViews;
+											}
+											CourseModel.updateOne(
+												{ id: updatedCourse.id },
+												{ $set: updatedCourse },
+												{ upsert: true }).exec();
+										});
+								}
+							});
 					});
 				});
 			});
 
-			return promise.then(function () {
+			return promise.then(function() {
 				return courses;
 			});
 		});
 	}
-}
 
-function parseDescription(course: ICourseDocument) {
-	const url = course.link;
-	return get(url).then(
-		(data) => {
-			const $ = cheerio.load(data);
-			const description = $(".description");
+	public static parseDescription(course: ICourse) {
+		const url = course.link;
+		return get(url).then(
+			(data) => {
+				const $ = cheerio.load(data);
+				const description = $(".description");
 
-			function getTextFromParagraphs(node: cheerio.Cheerio) {
-				let str = "";
-				node.each(function (this: cheerio.Cheerio, i, elem) {
-					const txt = $(this).text();
-					str += txt + "\n";
-				});
-				return str;
-			}
-
-			course.description = getTextFromParagraphs(
-				$("#about").nextUntil("#course_format, h2")
-			);
-			if (isEmpty(course.description)) {
-				course.description = "Error Description";
-			}
-
-			if (description.length > 0) {
-				course.shortDescription = description.children("p").text();
-			} else {
-				course.shortDescription =
-					course.description.split(".")[0] + ".";
-			}
-
-			const videoModal = $('[data-target="#videoModal"]');
-			const previewLink = videoModal.children("img").attr("src");
-			const previewLink2 = videoModal
-				.children(".wrap")
-				.children("img")
-				.attr("src");
-			if (course.previewImageLink == undefined) {
-				if (previewLink != undefined) {
-					course.previewImageLink = previewLink;
-				} else if (previewLink2 != undefined) {
-					course.previewImageLink = previewLink2;
-				} else {
-					course.previewImageLink =
-						"https://cdn.openedu.ru/fd95ff/8117f42b/img/course-image2.jpg";
+				function getTextFromParagraphs(node: cheerio.Cheerio) {
+					let str = "";
+					node.each(function(this: cheerio.Cheerio, i, elem) {
+						const txt = $(this).text();
+						str += txt + "\n";
+					});
+					return str;
 				}
-			}
 
-			return course;
-		},
-		(err) => {
-			console.log(
-				"Openedu parse error at " + course.id + ": " + err.stack
-			);
-			return course;
-		}
-	);
+				course.description = getTextFromParagraphs(
+					$("#about").nextUntil("#course_format, h2")
+				);
+				if (isEmpty(course.description)) {
+					course.description = "Error Description";
+				}
+
+				if (description.length > 0) {
+					course.shortDescription = description.children("p").text();
+				} else {
+					course.shortDescription =
+						course.description.split(".")[0] + ".";
+				}
+
+				const videoModal = $("[data-target=\"#videoModal\"]");
+				const previewLink = videoModal.children("img").attr("src");
+				const previewLink2 = videoModal
+					.children(".wrap")
+					.children("img")
+					.attr("src");
+				if (course.previewImageLink == undefined) {
+					if (previewLink != undefined) {
+						course.previewImageLink = previewLink;
+					} else if (previewLink2 != undefined) {
+						course.previewImageLink = previewLink2;
+					} else {
+						course.previewImageLink =
+							"https://cdn.openedu.ru/fd95ff/8117f42b/img/course-image2.jpg";
+					}
+				}
+
+				return course;
+			},
+			(err) => {
+				console.log(
+					"Openedu parse error at " + course.id + ": " + err.stack
+				);
+				return course;
+			}
+		);
+	}
 }
 
 export const openeduParser = new OpeneduParser();

@@ -5,12 +5,32 @@ interface ICourse {
 	shortDescription: string;
 	link: string;
 	previewImageLink: string;
-	vendor: string;
-	author: object;
+	vendor:  {
+		id : string,
+		name : string,
+		link : string,
+		icon : string
+	}
+	author: {
+		name: string,
+		link: string,
+		icon: string
+	};
 	duration: string;
-	price: number;
+	price: { [k : string] : any};
+	rating: {
+		external: {
+			averageScore : Number,
+			countReviews: Number
+		},
+		internal: {
+			averageScore : Number,
+			countReviews: Number
+		},
+	};
 	courseLanguages: string[];
-	creationDate: Date;
+	categories: number[];
+	countViews?: 0;
 }
 
 export default ICourse;

@@ -13,14 +13,17 @@ const CourseSchema = new Schema<ICourseDocument>({
 	},
 	courseName: {
 		type: String,
+		text: true,
 		required: true
 	},
 	description: {
 		type: String,
+		text: true,
 		required: true
 	},
 	shortDescription: {
 		type: String,
+		text: true,
 		required: true
 	},
 	link: {
@@ -32,11 +35,16 @@ const CourseSchema = new Schema<ICourseDocument>({
 		required: true
 	},
 	vendor: {
-		type: String,
+		type: {
+			id : String,
+			name : String,
+			icon : String
+		},
 		required: true
 	},
 	author: {
 		type: {
+			id: String,
 			name: String,
 			link: String,
 			icon: String
@@ -48,21 +56,34 @@ const CourseSchema = new Schema<ICourseDocument>({
 	},
 	courseLanguages: {
 		type: [String],
+		text: true,
 		required: true
 	},
 	creationDate: {
 		type: Date,
 		default: Date.now
 	},
-	groups: {
-		type: {
-			title: String,
-			code: String
-		}
+	categories: {
+		type: [Number]
 	},
 	price: {
-		type: Number,
+		type: {
+			amount : Number,
+			currency: String
+		},
 		required: true
+	},
+	rating: {
+		type: {
+			averageScore : Number,
+			countReviews: Number
+		},
+		required: true
+	},
+	countViews: {
+		type: Number,
+		required: true,
+		default: 0
 	}
 });
 
