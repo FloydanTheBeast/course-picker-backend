@@ -1,15 +1,16 @@
 import { Request, Response } from "express";
-import { Authorized, Body, Get, JsonController, Post, Req, Res } from "routing-controllers";
-import { ICategory, ICourse, IUser } from "../interfaces";
-import { CategoryModel } from "../models";
+import { Body, Get, JsonController, Post, Req, Res } from "routing-controllers";
+import { ICategory, ICourse } from "../interfaces";
+import { CategoryService } from "../services/CategoryService";
 import BaseController from "./BaseController";
-import Category, { ICategoryDocument } from "../models/category";
 
 @JsonController("/categories")
 export default class CategoryController extends BaseController<ICourse> {
+	categoryService: CategoryService;
 
 	constructor() {
 		super();
+		this.categoryService = new CategoryService();
 	}
 
 	@Get("/")
@@ -17,9 +18,11 @@ export default class CategoryController extends BaseController<ICourse> {
 		@Req() req: Request,
 		@Res() res: Response
 	): Promise<any | Response> {
-		return await CategoryModel.find({}, { _id: 0 }).then((categories) => {
-			return res.status(200).send(categories);
-		});
+		return await this.categoryService
+			.getAllCategories()
+			.then((categories) => {
+				return res.status(200).send(categories);
+			});
 	}
 
 	@Post("/")
@@ -30,15 +33,14 @@ export default class CategoryController extends BaseController<ICourse> {
 	): Promise<any | Response> {
 		if (req.body instanceof Array) {
 			for (const categoryData of req.body) {
-				await Category.updateOne(
-					{ id: categoryData.id },
-					{ $set: categoryData },
-					{ upsert: true });
+				await this.categoryService.updateOne(categoryData);
 			}
+
 			return res.status(200).send(categories);
 		} else {
-			return res.status(400).send({ error: "Неправильный формат данных" });
+			return res
+				.status(400)
+				.send({ error: "Неправильный формат данных" });
 		}
 	}
-
 }
