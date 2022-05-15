@@ -10,17 +10,17 @@ import {
 	Res
 } from "routing-controllers";
 import { IUser } from "../interfaces";
-import { SessionModel, UserModel } from "../models";
 import { IUserDocument } from "../models/user";
+import UserService from "../services/UserService";
 import BaseController from "./BaseController";
 
 @JsonController("/auth")
 export default class AuthController extends BaseController<IUser> {
-	userModel = UserModel;
-	sessionModel = SessionModel;
+	userService: UserService;
 
 	constructor() {
 		super();
+		this.userService = new UserService();
 	}
 
 	@Post("/signup")
@@ -30,30 +30,17 @@ export default class AuthController extends BaseController<IUser> {
 		@Res() res: Response
 	): Promise<IUser | Response> {
 		// TODO: Валидация данных
-		// await body("password")
-		// 	.isLength({ min: 5, max: 15 })
-		// 	.withMessage("Пароль должен иметь длину от 5 до 15 символов")
-		// 	.run(req);
 		const validationErrors = await validationResult(req);
-		// console.log(req);
-		console.log(validationErrors.array());
 
 		if (!validationErrors.isEmpty()) {
 			// TODO: Выбрасывать собственную ошибку
 			validationErrors.throw();
 		}
 
-		const user = new this.userModel(userData);
+		const user = this.userService.createUser(userData);
 
-		return await this.userModel
-			// TODO: Поиск по логину
-			.findOne({
-				$or: [
-					{ email: userData.email },
-					{ username: userData.username }
-				]
-			})
-			.exec()
+		return await this.userService
+			.findByCredentials(userData)
 			.then((existingUser) => {
 				if (existingUser) {
 					return res
@@ -63,7 +50,7 @@ export default class AuthController extends BaseController<IUser> {
 
 				return user
 					.save()
-					.then((user) =>
+					.then(() =>
 						res
 							.status(200)
 							.json({ status: "Пользователь успешно создан" })
@@ -79,13 +66,8 @@ export default class AuthController extends BaseController<IUser> {
 		@Body() userData: IUser,
 		@Res() res: Response
 	): Promise<any> {
-		return await this.userModel
-			.findOne({
-				$or: [
-					{ email: userData.email },
-					{ username: userData.username }
-				]
-			})
+		return await this.userService
+			.findByCredentials(userData)
 			.then((existingUser) => {
 				if (!existingUser) {
 					return res.status(401).json({
@@ -126,8 +108,8 @@ export default class AuthController extends BaseController<IUser> {
 			return res.status(400).json({ error: "Рефреш токен не указан" });
 		}
 
-		return await this.sessionModel
-			.findOneAndRemove({ refreshToken })
+		return await this.userService
+			.removeSession(refreshToken)
 			.then((existingSession) => {
 				if (!existingSession) {
 					return res.status(404).json({
@@ -168,8 +150,8 @@ export default class AuthController extends BaseController<IUser> {
 			});
 		}
 
-		return await this.sessionModel
-			.findOne({ refreshToken })
+		return await this.userService
+			.findSession(refreshToken)
 			.then((existingSession) => {
 				if (!existingSession) {
 					return res.status(404).json({

@@ -1,21 +1,26 @@
 import { Request, Response } from "express";
 import { Authorized, Get, JsonController, Req, Res } from "routing-controllers";
 import { ICourse } from "../interfaces";
-import { CompilationModel, CourseModel, ReviewModel, UserModel } from "../models";
+import {
+	CompilationModel,
+	CourseModel,
+	ReviewModel,
+	UserModel
+} from "../models";
 import BaseController from "./BaseController";
 import { objectToQueryString } from "../utils/urlencoder";
 import jwt from "jsonwebtoken";
 import { prepareOptionsByCourseId } from "../utils/courses";
 import { IReviewDocument } from "../models/review";
-
-const gc = require("expose-gc/function");
+import { CourseService } from "../services/CourseService";
 
 @JsonController("/courses")
 export default class CourseController extends BaseController<ICourse> {
-	courseModel = CourseModel;
+	courseService: CourseService;
 
 	constructor() {
 		super();
+		this.courseService = new CourseService();
 	}
 
 	@Get("/main")
@@ -23,51 +28,7 @@ export default class CourseController extends BaseController<ICourse> {
 		@Req() req: Request,
 		@Res() res: Response
 	): Promise<any | Response> {
-		let findConditions: { [k: string]: any } = {},
-			sortConditions: { [k: string]: any } = {countViews: -1},
-			lookup: { [k: string]: any }[] = [{
-				from: "categories",
-				localField: "categories",
-				foreignField: "id",
-				as: "categories"
-			}],
-			projection: { [k: string]: any } = {
-				_id: 0,
-				__v: 0,
-				description: 0,
-				reviews: 0,
-				"categories._id": 0
-			};
-
-		let options: any[] = [{ $match: findConditions }];
-
-		if (lookup.length > 0) {
-			for (const v of lookup) {
-				options.push({ $lookup: v });
-			}
-		}
-		if (Object.keys(sortConditions).length > 0) {
-			options.push({ $sort: sortConditions });
-		}
-		if (Object.keys(projection).length > 0) {
-			options.push({ $project: projection });
-		}
-
-
-		const dataObject: { [k: string]: any } = {};
-
-
-		dataObject.compilations = await CompilationModel.find({}, {_id : 0})
-			.then((compilations) => compilations);
-
-		dataObject.courses = await this.courseModel.find(findConditions).countDocuments().then((count) => {
-			const limit = 12;
-			return this.courseModel
-				.aggregate(options)
-				.limit(limit)
-				.then((data) => data);
-		});
-
+		const dataObject = await this.courseService.getMainPageCourses();
 
 		return res.status(200).send(dataObject);
 	}
@@ -84,29 +45,35 @@ export default class CourseController extends BaseController<ICourse> {
 			return res.status(401);
 		}
 		const data = jwt.decode(token);
-		if (typeof data === "object" && data?.hasOwnProperty("id")) {
+		if (typeof data === "object" && data?.id) {
 			const _id = data["id"];
-			return await UserModel.findOne({ _id: _id })
-				.then(async (existingUser) => {
-					const favouriteCourses = new Set(existingUser?.favouriteCourses),
+			return await UserModel.findOne({ _id: _id }).then(
+				async (existingUser) => {
+					const favouriteCourses = new Set(
+							existingUser?.favouriteCourses
+						),
 						viewedCourses = new Set(existingUser?.viewedCourses);
 					const isFavourite = favouriteCourses?.has(courseId);
 					const isViewed = viewedCourses?.has(courseId);
 
-					let findConditions: { [k: string]: any } = { id: courseId },
-						lookup: { [k: string]: any }[] = [{
-							from: "categories",
-							localField: "categories",
-							foreignField: "id",
-							as: "categories"
-						}],
+					const findConditions: { [k: string]: any } = {
+							id: courseId
+						},
+						lookup: { [k: string]: any }[] = [
+							{
+								from: "categories",
+								localField: "categories",
+								foreignField: "id",
+								as: "categories"
+							}
+						],
 						projection: { [k: string]: any } = {
 							_id: 0,
 							__v: 0,
 							"categories._id": 0
 						};
 
-					let options: any[] = [{ $match: findConditions }];
+					const options: any[] = [{ $match: findConditions }];
 					if (lookup.length > 0) {
 						for (const v of lookup) {
 							options.push({ $lookup: v });
@@ -124,40 +91,62 @@ export default class CourseController extends BaseController<ICourse> {
 							dataObject.course = data[0];
 
 							// Increment countViews
-							await this.courseModel.updateOne({ id: courseId },
-								{ $inc: { countViews: 1 } }).exec();
+							await this.courseModel
+								.updateOne(
+									{ id: courseId },
+									{ $inc: { countViews: 1 } }
+								)
+								.exec();
 
-							return await UserModel.findOne({ _id: _id })
-								.then(async (existingUser) => {
+							return await UserModel.findOne({ _id: _id }).then(
+								async (existingUser) => {
 									if (existingUser) {
 										const username = existingUser.username;
-										let options = prepareOptionsByCourseId(courseId);
+										const options = prepareOptionsByCourseId(
+											courseId
+										);
 
-										return await ReviewModel.aggregate(options)
-											.then((reviews) => {
-												reviews = reviews.sort((a, b) => {
-													if (a.user.username == username) {
-														return -1;
-													} else if (b.user.username == username) {
-														return 1;
-													} else {
-														return a.creationDate >= b.creationDate ?
-															a.creationDate == b.creationDate ? 0 : -1 : 1;
-													}
-												});
-												dataObject.course.reviews = reviews;
-												return res.status(200).send(dataObject);
+										return await ReviewModel.aggregate(
+											options
+										).then((reviews) => {
+											reviews = reviews.sort((a, b) => {
+												if (
+													a.user.username == username
+												) {
+													return -1;
+												} else if (
+													b.user.username == username
+												) {
+													return 1;
+												} else {
+													return a.creationDate >=
+														b.creationDate
+														? a.creationDate ==
+														  b.creationDate
+															? 0
+															: -1
+														: 1;
+												}
 											});
+											dataObject.course.reviews = reviews;
+											return res
+												.status(200)
+												.send(dataObject);
+										});
 									}
-									return res.status(400).send(
-										{ error: "Непредвиденная ошибка: не найден пользователь, к которому привязан JWT токен" });
-								});
-
+									return res.status(400).send({
+										error:
+											"Непредвиденная ошибка: не найден пользователь, к которому привязан JWT токен"
+									});
+								}
+							);
 						});
-				});
-
+				}
+			);
 		}
-		return res.status(400).send({ error: "Проблема с JWT: отсутствует параметр id" });
+		return res
+			.status(400)
+			.send({ error: "Проблема с JWT: отсутствует параметр id" });
 	}
 
 	@Get("/")
@@ -167,12 +156,14 @@ export default class CourseController extends BaseController<ICourse> {
 	): Promise<any | Response> {
 		let findConditions: { [k: string]: any } = {},
 			sortConditions: { [k: string]: any } = {},
-			lookup: { [k: string]: any }[] = [{
-				from: "categories",
-				localField: "categories",
-				foreignField: "id",
-				as: "categories"
-			}],
+			lookup: { [k: string]: any }[] = [
+				{
+					from: "categories",
+					localField: "categories",
+					foreignField: "id",
+					as: "categories"
+				}
+			],
 			projection: { [k: string]: any } = {
 				_id: 0,
 				__v: 0,
@@ -196,7 +187,10 @@ export default class CourseController extends BaseController<ICourse> {
 			sortConditions = { score: { $meta: "textScore" }, id: -1 };
 		}
 
-		if (req.query.sortViews && !isNaN(parseInt(req.query.sortViews.toString()))) {
+		if (
+			req.query.sortViews &&
+			!isNaN(parseInt(req.query.sortViews.toString()))
+		) {
 			const sortViews = parseInt(req.query.sortViews.toString());
 			sortConditions = { countViews: sortViews, id: -1 };
 		}
@@ -205,7 +199,7 @@ export default class CourseController extends BaseController<ICourse> {
 			findConditions["$or"] = [];
 			const categories = req.query.categories.toString().split(",");
 			params.categories = [];
-			for (let categoryKey in categories) {
+			for (const categoryKey in categories) {
 				const category = parseInt(categories[categoryKey]);
 				if (!isNaN(category)) {
 					params.categories.push(category);
@@ -214,12 +208,23 @@ export default class CourseController extends BaseController<ICourse> {
 			}
 			params.categories = params.categories.join(",");
 		}
-		const dataObject = await this.getDocumentsWithPagination(params, findConditions, projection, sortConditions, lookup);
+		const dataObject = await this.getDocumentsWithPagination(
+			params,
+			findConditions,
+			projection,
+			sortConditions,
+			lookup
+		);
 		return res.status(200).send(dataObject);
 	}
 
-	public async getDocumentsWithPagination(params: any, findConditions: any, projection: any,
-											sortConditions: any = {}, lookup: any = []) {
+	public async getDocumentsWithPagination(
+		params: any,
+		findConditions: any,
+		projection: any,
+		sortConditions: any = {},
+		lookup: any = []
+	) {
 		if (params.pageSize) {
 			params.pageNumber = isNaN(Number(params.pageNumber))
 				? 1
@@ -230,7 +235,7 @@ export default class CourseController extends BaseController<ICourse> {
 			params.pageNumber = 1;
 		}
 
-		let options: any[] = [{ $match: findConditions }];
+		const options: any[] = [{ $match: findConditions }];
 
 		if (lookup.length > 0) {
 			for (const v of lookup) {
@@ -244,32 +249,53 @@ export default class CourseController extends BaseController<ICourse> {
 			options.push({ $project: projection });
 		}
 
-		return await this.courseModel.find(findConditions).countDocuments().then((count) => {
-			const currentPageNumber = params.pageNumber > 0 ? parseInt(params.pageNumber) : 1;
-			params.pageSize = params.pageSize > 0 ? parseInt(params.pageSize) : 10;
-			return this.courseModel
-				.aggregate(options)
-				.skip(currentPageNumber > 0 ? (currentPageNumber - 1) * params.pageSize : 0)
-				.limit(params.pageSize)
-				.then((data) => {
-					const dataObject: { [k: string]: any } = {};
-					if (params.pagination != "0") {
-						delete params.pagination;
-						if (count > params.pageNumber * params.pageSize) {
-							params.pageNumber = currentPageNumber + 1;
-							dataObject.nextPage = `/courses/?` + objectToQueryString(params);
+		return await this.courseModel
+			.find(findConditions)
+			.countDocuments()
+			.then((count) => {
+				const currentPageNumber =
+					params.pageNumber > 0 ? parseInt(params.pageNumber) : 1;
+				params.pageSize =
+					params.pageSize > 0 ? parseInt(params.pageSize) : 10;
+				return this.courseModel
+					.aggregate(options)
+					.skip(
+						currentPageNumber > 0
+							? (currentPageNumber - 1) * params.pageSize
+							: 0
+					)
+					.limit(params.pageSize)
+					.then((data) => {
+						const dataObject: { [k: string]: any } = {};
+						if (params.pagination != "0") {
+							delete params.pagination;
+							if (count > params.pageNumber * params.pageSize) {
+								params.pageNumber = currentPageNumber + 1;
+								dataObject.nextPage =
+									`/courses/?` + objectToQueryString(params);
+							}
+							const countPages = Math.floor(
+								count >= 1
+									? (count - 1) / params.pageSize + 1
+									: 0
+							);
+							params.pageNumber = Math.min(
+								currentPageNumber - 1,
+								countPages
+							);
+							if (
+								params.pageNumber > 0 &&
+								params.pageNumber != currentPageNumber
+							) {
+								dataObject.previousPage =
+									`/courses/?` + objectToQueryString(params);
+							}
+							dataObject.countPages = countPages;
 						}
-						const countPages = Math.floor((count >= 1 ? (count - 1) / params.pageSize + 1 : 0));
-						params.pageNumber = Math.min(currentPageNumber - 1, countPages);
-						if (params.pageNumber > 0 && params.pageNumber != currentPageNumber) {
-							dataObject.previousPage = `/courses/?` + objectToQueryString(params);
-						}
-						dataObject.countPages = countPages;
-					}
-					dataObject.courses = data;
+						dataObject.courses = data;
 
-					return dataObject;
-				});
-		});
+						return dataObject;
+					});
+			});
 	}
 }
